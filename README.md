@@ -103,20 +103,20 @@ script and associated parameters across a collection of **tools**.
 
 ## Implementation
 
-The Dataset Manager makes it easier to manage and manipulate an existing
+The Dataset Workbench makes it easier to manage and manipulate an existing
 filesystem, and does not require that any data is moved to a dedicated
-location. By using the file prefix `._dm_`, the DM can annotate any
+location. By using the file prefix `._dw_`, the DW can annotate any
 existing folder and store associated metadata in-place. It is important
 to remember that this metadata is visible to anyone who has permission
-to view the contents of this folder. In other words, if one DM user creates
-or imports a dataset it will be visible to any other DM user who has
+to view the contents of this folder. In other words, if one DW user creates
+or imports a dataset it will be visible to any other DW user who has
 access to that folder. The process of sharing data between users is
 thereby entirely managed by the file system access permissions, and not
-by the DM.
+by the DW.
 
 ### Dataset Annotation
 
-Every **dataset** contains a file `._dm_dataset.json` which contains
+Every **dataset** contains a file `._dw_dataset.json` which contains
 any metadata annotating that **dataset** in JSON format. This file may
 be populated by importing the **dataset** directly, or by the output
 of the **tool** which is used to create it, if any. Any user may also
@@ -124,7 +124,7 @@ manually alter the contents of this file as needed.
 
 ### Collection Annotation
 
-Every **collection** contains a file `._dm_collection.json` which contains
+Every **collection** contains a file `._dw_collection.json` which contains
 any metadata annotating that **collection** in JSON format. This will
 typically be used to attach titles and descriptions to the **collection**
 to support the overall organization of data.
@@ -132,9 +132,9 @@ to support the overall organization of data.
 ### Home Folder
 
 The environment of each user is managed by updating the contents of
-the folder `$HOME/._dataset_manager/`. By setting the root of the
+the folder `$HOME/._dataset_workbench/`. By setting the root of the
 environment in this folder, every user of a multi-tenant system can
-use the DM to manage their own unique collection of datasets.
+use the DW to manage their own unique collection of datasets.
 
 The home folder contains:
 
@@ -158,8 +158,8 @@ Each of those files are located with the `tools/` folder in a
 subfolder named for the tool.
 
 ```
-$HOME/._dataset_manager/tools/toolname/tool.json
-$HOME/._dataset_manager/tools/toolname/tool.sh
+$HOME/._dataset_workbench/tools/toolname/tool.json
+$HOME/._dataset_workbench/tools/toolname/tool.sh
 ```
 
 ### Configurations
@@ -172,8 +172,8 @@ Each of those files are located with the `config/` folder in a
 subfolder named for the configuration.
 
 ```
-$HOME/._dataset_manager/config/configname/config.json
-$HOME/._dataset_manager/config/configname/config.sh
+$HOME/._dataset_workbench/config/configname/config.json
+$HOME/._dataset_workbench/config/configname/config.sh
 ```
 
 ### Sharing Tools and Configurations
@@ -189,9 +189,9 @@ For example, when a user runs the following tool:
 {"tool": "aligner", "source": "ExternalOrg/UsefulRepo"}
 ```
 The GitHub repository `ExternalOrg/UsefulRepo` will be cloned to
-`$HOME/._dataset_manager/repositories/` and the **tool** will be sourced
-from the subfolder `._dataset_manager/tools/aligner/`.
+`$HOME/._dataset_workbench/repositories/` and the **tool** will be sourced
+from the subfolder `._dataset_workbench/tools/aligner/`.
 
 With this approach, it should be possible to distribute the tools
 and configurations needed to run a particular analysis by anyone
-using the Dataset Manager.
+using the Dataset Workbench.
