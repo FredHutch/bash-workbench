@@ -22,4 +22,4 @@ def setup_root_folder(root_folder=None):
         if not os.path.exists(fp):
 
             # Create it
-            os.makedir(fp)
+            os.makedirs(fp)
