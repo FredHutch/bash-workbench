@@ -1,6 +1,6 @@
 import argparse
 import os
-from wb_utils.filesystem.local import setup_root_folder
+import wb_utils
 
 def make_parser():
     """Return a base parser used to format command line arguments for the Workbench CLI."""
@@ -33,7 +33,7 @@ def make_parser():
     # Store the information for each subcommand as a nested dictionary
     command_parsers = dict(
         setup_root_folder=dict(
-            func=setup_root_folder,
+            func=wb_utils.filesystem.local.setup_root_folder,
             help="""
             Ensure that the root workbench folder has all necessary folders set up.
             The location of the root workbench folder can be customized by modifying the
