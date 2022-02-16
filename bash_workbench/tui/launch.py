@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
 
-from wb_tui.app import WorkbenchApp
-from wb_tui.args import parse_args
-from wb_utils.workbench import Workbench
+import bash_workbench as wb
 
-
-if __name__ == "__main__":
+def tui():
 
     # Parse the command line arguments
-    args = parse_args()
+    args = wb.tui.args.parse_args()
 
     # Instantiate an object which contains all of the data and functions needed
     # to coordinate the Workbench
-    wb = Workbench(
+    workbench = wb.utils.workbench.Workbench(
         base_folder=args.base_folder,
         profile=args.profile
     )
 
-    TA = WorkbenchApp()
+    TA = wb.tui.app.WorkbenchApp()
     TA.run()

@@ -1,10 +1,10 @@
 import npyscreen
-import wb_tui
+import bash_workbench as wb
 
 class WorkbenchApp(npyscreen.NPSAppManaged):
     def onStart(self):
         # Primary display is a tree view of collections and datasets
         self.registerForm(
             "MAIN",
-            wb_tui.forms.DatasetExplorer()
+            wb.tui.forms.DatasetExplorer()
         )
