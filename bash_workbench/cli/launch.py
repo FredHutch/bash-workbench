@@ -3,7 +3,7 @@ import bash_workbench as wb
 def cli():
     
     # Get the base parser for the CLI
-    parser = wb.utils.args.make_parser()
+    parser = wb.cli.args.make_parser()
 
     # Parse the arguments
     args = parser.parse_args()
