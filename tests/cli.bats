@@ -60,7 +60,7 @@
 
 @test "index_collection" {
 
-  # Create anoter subfolder outside of the base folder
+  # Create another subfolder outside of the base folder
   EXT_FOLDER=ext_data/data_folder_2
   mkdir ${EXT_FOLDER}
 
@@ -89,4 +89,28 @@
   # Validate that a link was created for that folder in the home directory
   echo "Checking for valid symlink"
   (( $(diff base_folder/test/data/data_folder_2/._wb_index.json $INDEX_JSON | wc -l) == 0 ))
+}
+
+@test "show_datasets" {
+
+  # Create another subfolder inside the previously-created collection
+  EXT_FOLDER=ext_data/data_folder_2/data_folder_3
+  mkdir $EXT_FOLDER
+
+  # Index the newly created folder as a dataset
+  wb-cli \
+    --base-folder base_folder \
+    --profile test \
+    index_dataset \
+    --path ${EXT_FOLDER}
+
+  # List all indexed folders
+  DATASETS="""$(wb-cli \
+    --base-folder base_folder \
+    --profile test \
+    show_datasets)"""
+
+  # Make sure that all three folders are found
+  [ $(echo "$DATASETS" | jq 'length') == 3 ]
+
 }

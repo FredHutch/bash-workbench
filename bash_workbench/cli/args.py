@@ -72,6 +72,20 @@ def make_parser():
                 )
             )
         ),
+        dict(
+            key="show_datasets",
+            func=wb.utils.filesystem.local.show_datasets,
+            help="""
+            Print the list of all datasets linked to the home directory.
+            """,
+            kwargs=dict(
+                format=dict(
+                    type=str,
+                    default="json",
+                    help="Format to use for printing"
+                )
+            )
+        ),
     ]
 
     # Iterate over each of the subcommands

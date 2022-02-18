@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import uuid
 
 
 def setup_root_folder(base_folder=None, profile=None, logger=None):
@@ -95,6 +96,7 @@ def index_dataset(
         logger=logger
     )
 
+
 def _index_folder(
     ix_type:str=None,
     path:str=None,
@@ -130,7 +132,9 @@ def _index_folder(
     # Create the index object, consisting of
     #  - the folder type (collection or dataset)
     #  - timestamp
+    #  - unique identifier
     index = dict(
+        uuid=str(uuid.uuid4()),
         type=ix_type,
         indexed_at=_timestamp().encode(),
         name=_sanitize_path(path).rsplit("/", 1)[-1],
@@ -158,6 +162,8 @@ def _add_to_home_tree(path=None, base_folder=None, profile=None, logger=None):
     # Resolve symlinks and remove any terminal slashes
     path = _sanitize_path(path)
 
+    logger.info(f"Making sure that folder is present in home tree: {path}")
+
     # Keep track of whether we've seen this path
     path_seen = False
 
@@ -165,7 +171,7 @@ def _add_to_home_tree(path=None, base_folder=None, profile=None, logger=None):
     for wb_folder in _walk_home_tree(base_folder=base_folder, profile=profile):
 
         # If we come across this folder
-        if wb_folder["abs_path"] == path:
+        if wb_folder == path:
 
             # Mark this path as seen
             path_seen = True
@@ -203,7 +209,7 @@ def _walk_home_tree(base_folder=None, profile=None):
 
     # To start, add the home folder to the list of folders to check
     folders_to_check.append(
-        os.path.join(base_folder, profile)
+        os.path.join(base_folder, profile, "data")
     )
 
     # Iterate while there are folders remaining to check
@@ -230,10 +236,10 @@ def _walk_home_tree(base_folder=None, profile=None):
                 seen_folders.add(subpath)
 
                 # Emit this path
-                yield subpath
+                yield os.path.abspath(subpath)
 
                 # Add the subpath to the list of paths to check next
-                folder_to_check.append(subpath)
+                folders_to_check.append(subpath)
 
 
 def _links_from_home_directory(base_folder=None, profile=None):
@@ -325,6 +331,8 @@ def _sanitize_path(path):
 
         # Resolve the link
         path = os.readlink(path)
+
+    assert not os.path.islink(path), "Cannot follow nested symlinks"
 
     # If there is a terminal slash in the pathname
     if path.endswith("/"):
@@ -425,7 +433,13 @@ def _read_folder_index(path):
             # file is not in JSON format.
             # This behavior is intentional, because the
             # format of this file should always be JSON.
-            json.load(handle)
+            ix = json.load(handle)
+
+        # Make sure that the index has a uuid and a type
+        for k in ["uuid", "type"]:
+            assert k in ix, f"Missing key ({k}) in index {ix_path}"
+
+        return ix
 
 
 def _write_folder_index(path, dat, overwrite=False, indent=4):
@@ -479,3 +493,201 @@ def _map_wb_file_path(folder, filename, workbench_prefix="._wb_"):
     # needless copying of the prefix "._wb_" in the library code
     return os.path.join(folder, workbench_prefix + filename)
 
+def show_datasets(
+    base_folder=None,
+    profile=None,
+    logger=None,
+    format:str=None,
+    json_indent:int=4
+):
+    """Print a list of all datasets linked from the home folder."""
+
+    # Get the list of all datasets linked from the home folder
+    datasets = _list_datasets(base_folder=base_folder, profile=profile, logger=logger)
+
+    # If the print format is "json"
+    if format == "json":
+
+        # Print the list of datasets in JSON format
+        print(json.dumps(datasets, indent=json_indent))
+
+    # If the print format is "tree"
+    elif format == "tree":
+
+        _print_dataset_tree(datasets)
+
+
+def _print_dataset_tree(datasets):
+    """Print the list of datasets as a tree."""
+
+    # Format datasets as a dict, keyed by uuid
+    datasets_dict = {
+        dataset["uuid"]: dataset
+        for dataset in datasets
+    }
+
+    # Make a dict pointing from children to parents
+    parent_dict = {
+        child_uuid: dataset_uuid
+        for dataset_uuid, dataset in datasets_dict.items()
+        for child_uuid in dataset["children"]
+    }
+
+    # Find the uuids of all datasets which do not have parents
+    root_datasets = [
+        dataset["uuid"]
+        for dataset in datasets
+        if parent_dict.get(dataset["uuid"]) is None
+    ]
+
+    # Recursively print each of those datasets
+    _print_dataset_tree_recursive(root_datasets, datasets_dict)
+    
+
+def _print_dataset_tree_recursive(dataset_uuids, datasets_dict, indentation=""):
+    """Function to recursively print the directory structure."""
+
+    # Get the number of datasets in the list
+    dataset_n = len(dataset_uuids)
+
+    # For each dataset, set the `list_position` as 'single', 'first', 'middle', or 'last'
+    # Also set the flag `has_children` as True/False
+
+    # Iterate over each dataset
+    for dataset_i, dataset_uuid in enumerate(dataset_uuids):
+
+        # If this dataset is a singlet
+        if dataset_n == 1:
+            list_position = "single"
+
+        # If there are multiple datasets, and this is the first one
+        elif dataset_i == 0:
+            list_position = "first"
+
+        # If this is the last one in the list
+        elif dataset_i == dataset_n - 1:
+            list_position = "last"
+
+        # Otherwise, we are in the middle of a list
+        else:
+            list_position = "middle"
+
+        # Mark whether this dataset has children
+        has_children = len(datasets_dict[dataset_uuid].get("children", [])) > 0
+
+        # Print the dataset information with the specified prefix
+        _print_dataset_tree_single(
+            datasets_dict[dataset_uuid],
+            indentation=indentation,
+            list_position=list_position,
+            has_children=has_children
+        )
+
+        # Recursively repeat the process for any children of this dataset
+        _print_dataset_tree_recursive(
+            datasets_dict[dataset_uuid].get("children", []),
+            datasets_dict,
+            # If this dataset is followed by others in this group
+            # Add a continuation character to the indentation
+            # Otherwise, there are no more in this group, and so the indentation is blank
+            indentation=indentation + "  │" if list_position in ["first", "middle"] else "   "
+        )
+
+
+def _print_dataset_tree_single(
+    dataset_info,
+    indentation="",
+    list_position=None,
+    has_children=None
+):
+
+    name_prefix = dict(
+        single=" └─",
+        first=" └┬",
+        last="  └",
+        middle="  ├"
+    )[list_position]
+
+    # Print the name of the dataset
+    print(f"{indentation}{name_prefix} {dataset_info['name']}")
+
+    # Make a separate prefix for any additional lines
+    # If there are more items in the list, add a continuation
+    addl_prefix = "  │" if list_position in ["first", "middle"] else "   "
+
+    # Add another continuation if there are children below this dataset
+    addl_prefix = f'{addl_prefix}{" │" if has_children else "  "}'
+
+    # Print the uuid and any additional fields
+    fields = [
+        f"uuid: {dataset_info['uuid']}",
+        f"path: {dataset_info['path']}",
+    ]
+
+    # If there is a description
+    if len(dataset_info['description']) > 0:
+        fields.append(f"description: {dataset_info['description']}")
+
+    # If there are tags
+    if len(dataset_info.get("tags", {})) > 0:
+        for k, v in dataset_info["tags"].items():
+            fields.append(f"tag: {k} = {v}")
+
+    fields.append("")
+    for field in fields:
+        print(f"{indentation}{addl_prefix}  {field}")
+    
+
+def _list_datasets(
+    base_folder=None,
+    profile=None,
+    logger=None):
+    """Return the list of all datasets and collections linked from the home folder."""
+
+    # The user must provide the base folder and profile
+    assert base_folder is not None, "Must provide base_folder"
+    assert profile is not None, "Must provide profile"
+
+    # Get the list of all folders which are linked under the home directory and have an index
+    datasets = list(_walk_home_tree(base_folder=base_folder, profile=profile))
+
+    # Get the details for each one, and add information about each subfolder
+    dataset_info = [
+        dict(
+            path=fp,
+            children=_list_children(fp),
+            **_read_folder_index(fp)
+        )
+        for fp in datasets
+    ]
+
+    if logger is not None:
+        logger.info(f"Found {len(dataset_info):,} indexed folders")
+
+    return dataset_info
+
+
+def _list_children(fp):
+    """Return a list with the uuid's of any indexed folders inside this one."""
+
+    children_uuids = list()
+
+    # Iterate over all of the paths inside this folder
+    for subfolder in os.listdir(fp):
+
+        # Construct the complete path to the subfolder
+        subfolder = _sanitize_path(os.path.join(fp, subfolder))
+
+        # If it is a directory
+        if os.path.isdir(subfolder):
+
+            # Get the index of the subfolder, if any exists
+            subfolder_ix = _read_folder_index(subfolder)
+
+            # If the subfolder has an index
+            if subfolder_ix is not None:
+
+                # Add the 'uuid' to the list
+                children_uuids.append(subfolder_ix["uuid"])
+
+    return children_uuids
