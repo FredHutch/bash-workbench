@@ -78,7 +78,6 @@ def make_parser():
         ),
         dict(
             key="show_datasets",
-            func=wb.utils.filesystem.local.show_datasets,
             help="""
             Print the list of all datasets linked to the home directory.
             """,
@@ -87,6 +86,80 @@ def make_parser():
                     type=str,
                     default="json",
                     help="Format to use for printing"
+                )
+            )
+        ),
+        dict(
+            key="find_datasets",
+            help="""
+            Find the dataset(s) by searching names, descriptions, and tags.
+            """,
+            kwargs=dict(
+                name=dict(
+                    type=str,
+                    default=None,
+                    help="Only show datasets containing this term or phrase in their name"
+                ),
+                description=dict(
+                    type=str,
+                    default=None,
+                    help="Only show datasets containing this term or phrase in their description"
+                ),
+                tag=dict(
+                    type=str,
+                    default=None,
+                    help="Only show datasets with this tag (specify as 'KEY=VALUE')"
+                ),
+                format=dict(
+                    type=str,
+                    default="json",
+                    help="Format to use for printing"
+                )
+            )
+        ),
+        dict(
+            key="change_name",
+            help="""
+            Change the name of a dataset
+            """,
+            kwargs=dict(
+                uuid=dict(
+                    type=str,
+                    default=None,
+                    help="Specify the dataset to modify by its uuid"
+                ),
+                path=dict(
+                    type=str,
+                    default=None,
+                    help="Specify the dataset to modify by its absolute or relative path"
+                ),
+                name=dict(
+                    type=str,
+                    default=None,
+                    help="New name to apply to the dataset"
+                )
+            )
+        ),
+        dict(
+            key="change_description",
+            help="""
+            Change the description of a dataset
+            """,
+            kwargs=dict(
+                uuid=dict(
+                    type=str,
+                    default=None,
+                    help="Specify the dataset to modify by its uuid"
+                ),
+                path=dict(
+                    type=str,
+                    default=None,
+                    help="Specify the dataset to modify by its absolute or relative path"
+                ),
+                description=dict(
+                    type=str,
+                    default=None,
+                    help="New description to apply to the dataset"
                 )
             )
         ),

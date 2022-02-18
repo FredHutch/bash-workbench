@@ -493,6 +493,7 @@ def _map_wb_file_path(folder, filename, workbench_prefix="._wb_"):
     # needless copying of the prefix "._wb_" in the library code
     return os.path.join(folder, workbench_prefix + filename)
 
+
 def show_datasets(
     base_folder=None,
     profile=None,
@@ -520,28 +521,15 @@ def show_datasets(
 def _print_dataset_tree(datasets):
     """Print the list of datasets as a tree."""
 
-    # Format datasets as a dict, keyed by uuid
-    datasets_dict = {
-        dataset["uuid"]: dataset
-        for dataset in datasets
-    }
-
-    # Make a dict pointing from children to parents
-    parent_dict = {
-        child_uuid: dataset_uuid
-        for dataset_uuid, dataset in datasets_dict.items()
-        for child_uuid in dataset["children"]
-    }
-
     # Find the uuids of all datasets which do not have parents
     root_datasets = [
         dataset["uuid"]
-        for dataset in datasets
-        if parent_dict.get(dataset["uuid"]) is None
+        for dataset in datasets.values()
+        if dataset.get("parent") is None
     ]
 
     # Recursively print each of those datasets
-    _print_dataset_tree_recursive(root_datasets, datasets_dict)
+    _print_dataset_tree_recursive(root_datasets, datasets)
     
 
 def _print_dataset_tree_recursive(dataset_uuids, datasets_dict, indentation=""):
@@ -661,6 +649,22 @@ def _list_datasets(
         for fp in datasets
     ]
 
+    # Format datasets as a dict, keyed by uuid
+    dataset_info = {
+        dataset["uuid"]: dataset
+        for dataset in dataset_info
+    }
+
+    # Add the parent information to the dataset field
+    # Iterate over each dataset
+    for dataset_uuid in dataset_info:
+
+        # Iterate over its children
+        for child_uuid in dataset_info[dataset_uuid]["children"]:
+
+            # Add the dataset uuid to the 'parent' field in the child
+            dataset_info[child_uuid]["parent"] = dataset_uuid
+
     if logger is not None:
         logger.info(f"Found {len(dataset_info):,} indexed folders")
 
@@ -691,3 +695,243 @@ def _list_children(fp):
                 children_uuids.append(subfolder_ix["uuid"])
 
     return children_uuids
+
+
+def change_name(
+    base_folder=None,
+    profile=None,
+    logger=None,
+    uuid=None,
+    path=None,
+    name=None,
+):
+    """Modify the name of a folder (dataset or collection)."""
+
+    _change_folder_attribute(
+        base_folder=base_folder,
+        profile=profile,
+        logger=logger,
+        uuid=uuid,
+        path=path,
+        key="name",
+        value=name
+    )
+
+
+def change_description(
+    base_folder=None,
+    profile=None,
+    logger=None,
+    uuid=None,
+    path=None,
+    description=None,
+):
+    """Modify the description of a folder (dataset or collection)."""
+
+    _change_folder_attribute(
+        base_folder=base_folder,
+        profile=profile,
+        logger=logger,
+        uuid=uuid,
+        path=path,
+        key="description",
+        value=description
+    )
+
+
+def _change_folder_attribute(
+    base_folder=None,
+    profile=None,
+    logger=None,
+    uuid=None,
+    path=None,
+    key=None,
+    value=None
+):
+    """Modify the attribute of a folder."""
+
+    msg = "Must provide either uuid or path to indicate dataset"
+    assert uuid is not None or path is not None, msg
+
+    msg = "Must provide either uuid or path to indicate dataset, but not both"
+    assert uuid is None or path is None, msg
+
+    # First try finding the folder by path
+    if path is not None:
+
+        # Get the type of object this points to
+        path_type = _get_path_type(path)
+
+        # If the user specified a folder which is not yet indexed
+        msg = f"The indicated folder is not yet indexed ({path})"
+        assert path_type != "folder", msg
+
+        # If the user specified a file, and not a folder
+        msg = f"Please specify a folder, not a file ({path})"
+        assert path_type != "folder", msg
+
+        # At this point, the path must be a dataset or collection
+        assert path_type in ["dataset", "collection"], f"Unrecognized: {path_type}"
+
+    # Otherwise, try finding by uuid
+    else:
+
+        assert uuid is not None
+
+        path, ix = _find_folder_by_uuid(base_folder=base_folder, profile=profile, uuid=uuid)
+
+        # At this point, `path` contains the folder location with the index
+        # object `ix` that has 'uuid' set to `uuid`
+
+        logger.info(f"Found dataset {uuid} at {path}")
+        
+        # Update the attribute
+        logger.info(f"Changing {key} to {value}")
+        ix[key] = value
+
+        # Save the index
+        logger.info("Saving index")
+        _write_folder_index(path, ix, overwrite=True)
+
+
+def _find_folder_by_uuid(
+    base_folder=None,
+    profile=None,
+    uuid=None
+):
+    assert base_folder is not None, "Must provide base_folder"
+    assert profile is not None, "Must provide profile"
+    assert uuid is not None, "Must provide uuid"
+
+    # Walk through all of the indexed folders in the home tree
+    found_path = False
+    for path in _walk_home_tree(base_folder=base_folder, profile=profile):
+
+        # Read the index
+        ix = _read_folder_index(path)
+
+        # If the uuid is a match
+        if ix["uuid"] == uuid:
+
+            # Indicate that we found the path
+            found_path = True
+
+            # And stop looking
+            break
+
+    assert found_path, f"Could not find any dataset with uuid={uuid}"
+
+    return path, ix
+
+
+def find_datasets(
+    base_folder=None,
+    profile=None,
+    name=None,
+    description=None,
+    tag=None,
+    logger=None,
+    format:str=None,
+    json_indent:int=4
+):
+    """Find any datasets which match the provided queries."""
+
+    # The user must specify a query for one of name, description, or tag
+    msg = "Specify a query term for one of name, description, or tag"
+    assert name is not None or description is not None or tag is not None, msg
+
+    # Get the list of all datasets linked from the home folder
+    datasets = _list_datasets(base_folder=base_folder, profile=profile, logger=logger)
+
+    # If a query name was provided
+    if name is not None:
+
+        # Only keep folders which match this query, or their parent collections
+        datasets = _filter_datasets(datasets, field="name", value=name, logger=logger)
+
+    # If a query description was provided
+    if description is not None:
+
+        # Only keep folders which match this query, or their parent collections
+        datasets = _filter_datasets(datasets, field="description", value=description, logger=logger)
+
+    # If a query tag was provided
+    if tag is not None:
+
+        # Only keep folders which match this query, or their parent collections
+        datasets = _filter_datasets(datasets, field="tag", value=tag, logger=logger)
+
+    # If the print format is "json"
+    if format == "json":
+
+        # Print the list of datasets in JSON format
+        print(json.dumps(datasets, indent=json_indent))
+
+    # If the print format is "tree"
+    elif format == "tree":
+
+        _print_dataset_tree(datasets)
+
+
+def _filter_datasets(datasets, field=None, value=None, logger=None):
+    """Filter by a single query term."""
+
+    # For tags, the 'value' must be "{key}={value}"
+    if field == "tag":
+
+        msg = "To filter by tag, provide query in the format 'key=value'"
+        assert "=" in value, msg
+        assert value.endswith("=") is False, msg
+
+        # parse the tag key and value
+        key, value = value.split("=", 1)
+
+        # Get the list of uuids for datasets which contain this term
+        matching_uuids = [
+            dataset_uuid
+            for dataset_uuid, dataset in datasets.items()
+            if dataset.get("tags", {}).get(key) == value
+        ]
+
+    # For all other query fields
+    else:
+
+        # Get the list of uuids for datasets which contain this term
+        matching_uuids = [
+            dataset_uuid
+            for dataset_uuid, dataset in datasets.items()
+            if value in dataset[field]
+        ]
+
+    # Make a set of datasets to keep
+    to_keep = set()
+
+    # For each of the matching uuids
+    for dataset_uuid in matching_uuids:
+
+        # Iterate over the chain of parents back to the root
+        while dataset_uuid is not None:
+
+            # Add it to the set
+            to_keep.add(dataset_uuid)
+
+            # Move to the parent
+            dataset_uuid = datasets[dataset_uuid].get("parent")
+
+    # Keep the datasets which are in this path
+    datasets = {
+        dataset_uuid: dataset
+        for dataset_uuid, dataset in datasets.items()
+        if dataset_uuid in to_keep
+    }
+
+    # Update the 'children' field of each to only contain datasets in the path
+    for dataset_uuid in datasets:
+
+        # If there are any children
+        if len(datasets[dataset_uuid].get("children", [])) > 0:
+
+            # Subset the list to only overlap with `to_keep`
+            datasets[dataset_uuid]["children"] = list(set(datasets[dataset_uuid]["children"]) & to_keep)
+
+    return datasets
