@@ -24,6 +24,13 @@ def make_parser():
         help="Profile name corresponding to a folder within the base folder. All datasets, tools, and configurations are stored here."
     )
 
+    parser.add_argument(
+        "--filesystem",
+        type=str,
+        default="local",
+        help="Type of filesystem used to store datasets (options: local)."
+    )
+
     # Add subparsers for each of the commands within the CLI
     subparsers = parser.add_subparsers(
         title="subcommands",
@@ -34,7 +41,6 @@ def make_parser():
     command_parsers = [
         dict(
             key="setup_root_folder",
-            func=wb.utils.filesystem.local.setup_root_folder,
             help="""
             Ensure that the root workbench folder has all necessary folders set up.
             The location of the root workbench folder can be customized by modifying the
@@ -44,7 +50,6 @@ def make_parser():
         ),
         dict(
             key="index_dataset",
-            func=wb.utils.filesystem.local.index_dataset,
             help="""
             Index a dataset folder, adding annotations and linking
             to the larger tree of datasets and collections.
@@ -59,7 +64,6 @@ def make_parser():
         ),
         dict(
             key="index_collection",
-            func=wb.utils.filesystem.local.index_collection,
             help="""
             Index a collection folder, adding annotations and linking
             to the larger tree of datasets and collections.
@@ -92,7 +96,7 @@ def make_parser():
     for command_info in command_parsers:
 
         # Make sure that the required fields are available
-        for field in ["func", "help"]:
+        for field in ["help"]:
             assert field in command_info, f"All subcommands must have '{field}' defined"
 
         # Add a parser for this command
@@ -112,7 +116,7 @@ def make_parser():
 
         # Add the default function
         command_info["parser"].set_defaults(
-            func=command_info["func"]
+            func=command_info["key"]
         )
 
     return parser
