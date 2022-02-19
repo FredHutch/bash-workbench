@@ -6,14 +6,17 @@
 
 @test "setup_root_folder" {
 
+  # Make an alias to make sure that all calls to wb-cli
+  # will use the same local root folder
+  rm -f wb-cli-test
+  echo 'wb-cli --base-folder base_folder --profile test ${@:1}' > wb-cli-test
+  chmod +x wb-cli-test
+
   # Remove anything currently in the base_folder/
   rm -rf base_folder
 
   # Set up the base folder
-  wb-cli \
-    --base-folder base_folder \
-    --profile test \
-    setup_root_folder
+  ./wb-cli-test setup_root_folder
 
   # Validate that all files were created as appropriate
   [ -d base_folder ]
@@ -32,11 +35,7 @@
   mkdir ${EXT_FOLDER}
 
   # Index the newly created folder as a dataset
-  wb-cli \
-    --base-folder base_folder \
-    --profile test \
-    index_dataset \
-    --path ${EXT_FOLDER}
+  ./wb-cli-test index_dataset --path ${EXT_FOLDER}
 
   # Construct the path which is expected to contain the index
   INDEX_JSON=${EXT_FOLDER}/._wb_index.json
@@ -65,11 +64,7 @@
   mkdir ${EXT_FOLDER}
 
   # Index the newly created folder as a collection
-  wb-cli \
-    --base-folder base_folder \
-    --profile test \
-    index_collection \
-    --path ${EXT_FOLDER}
+  ./wb-cli-test index_collection --path ${EXT_FOLDER}
 
   # Construct the path which is expected to contain the index
   INDEX_JSON=${EXT_FOLDER}/._wb_index.json
@@ -98,19 +93,10 @@
   mkdir $EXT_FOLDER
 
   # Index the newly created folder as a dataset
-  wb-cli \
-    --base-folder base_folder \
-    --profile test \
-    index_dataset \
-    --path ${EXT_FOLDER}
+  ./wb-cli-test index_dataset --path ${EXT_FOLDER}
 
   # List all indexed folders
-  DATASETS="""$(wb-cli \
-    --base-folder base_folder \
-    --profile test \
-    show_datasets)"""
-
   # Make sure that all three folders are found
-  [ $(echo "$DATASETS" | jq 'length') == 3 ]
+  [ $(./wb-cli-test show_datasets | jq 'length') == 3 ]
 
 }
