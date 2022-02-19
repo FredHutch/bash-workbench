@@ -714,7 +714,8 @@ def change_name(
         uuid=uuid,
         path=path,
         key="name",
-        value=name
+        # The `name` will be provided as a list (broken on whitespaces)
+        value=" ".join(name)
     )
 
 
@@ -735,7 +736,8 @@ def change_description(
         uuid=uuid,
         path=path,
         key="description",
-        value=description
+        # The `description` will be provided as a list (broken on whitespaces)
+        value=" ".join(description)
     )
 
 
@@ -781,6 +783,7 @@ def _find_folder(
         path, ix = _find_folder_by_uuid(base_folder=base_folder, profile=profile, uuid=uuid)
 
     return path, ix
+
 
 def _change_folder_attribute(
     base_folder=None,
@@ -951,11 +954,25 @@ def find_datasets(
     # If a query name was provided
     if name is not None:
 
+        # If the name is provided as a list, collapse it into a string
+        if isinstance(name, list):
+            name = " ".join(name)
+
+        if logger is not None:
+            logger.info(f"Querying datasets by name={name}")
+
         # Only keep folders which match this query, or their parent collections
         datasets = _filter_datasets(datasets, field="name", value=name, logger=logger)
 
     # If a query description was provided
     if description is not None:
+
+        # If the description is provided as a list, collapse it into a string
+        if isinstance(description, list):
+            description = " ".join(description)
+
+        if logger is not None:
+            logger.info(f"Querying datasets by description={description}")
 
         # Only keep folders which match this query, or their parent collections
         datasets = _filter_datasets(datasets, field="description", value=description, logger=logger)
@@ -963,8 +980,18 @@ def find_datasets(
     # If a query tag was provided
     if tag is not None:
 
-        # Only keep folders which match this query, or their parent collections
-        datasets = _filter_datasets(datasets, field="tag", value=tag, logger=logger)
+        # If the tag is not a list, make a list of 1
+        if not isinstance(tag, list):
+            tag = [tag]
+
+        # Iterate over the multiple tags which may have been provided
+        for tag_item in tag:
+
+            if logger is not None:
+                logger.info(f"Querying datasets by tag {tag_item}")
+
+            # Only keep folders which match this query, or their parent collections
+            datasets = _filter_datasets(datasets, field="tag", value=tag_item, logger=logger)
 
     if logger is not None:
         logger.info(f"Number of datasets matching query: {len(datasets):,}")

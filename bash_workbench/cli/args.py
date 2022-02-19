@@ -98,17 +98,20 @@ def make_parser():
                 name=dict(
                     type=str,
                     default=None,
+                    nargs="+",
                     help="Only show datasets containing this term or phrase in their name"
                 ),
                 description=dict(
                     type=str,
                     default=None,
+                    nargs="+",
                     help="Only show datasets containing this term or phrase in their description"
                 ),
                 tag=dict(
                     type=str,
                     default=None,
-                    help="Only show datasets with this tag (specify as 'KEY=VALUE')"
+                    nargs="+",
+                    help="Only show datasets with this tag (specify one or more as 'KEY1=VALUE1 KEY2=VALUE2')"
                 ),
                 format=dict(
                     type=str,
@@ -136,6 +139,7 @@ def make_parser():
                 name=dict(
                     type=str,
                     default=None,
+                    nargs="+",
                     help="New name to apply to the dataset"
                 )
             )
@@ -159,6 +163,7 @@ def make_parser():
                 description=dict(
                     type=str,
                     default=None,
+                    nargs="+",
                     help="New description to apply to the dataset"
                 )
             )
