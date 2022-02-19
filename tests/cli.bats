@@ -137,3 +137,29 @@
   [ $(./wb-cli-test find_datasets --description Very Useful | jq 'length') == 3 ]
 
 }
+
+@test "update_tags" {
+
+  # Add tags to datasets
+  ./wb-cli-test update_tag --path ext_data/data_folder_1 --key position --value base
+  ./wb-cli-test update_tag --path ext_data/data_folder_2 --key position --value base
+  ./wb-cli-test update_tag --path ext_data/data_folder_2/data_folder_3 --key position --value tier1
+  ./wb-cli-test update_tag --path ext_data/data_folder_2/data_folder_4a --key position --value tier1
+  ./wb-cli-test update_tag --path ext_data/data_folder_2/data_folder_4b --key position --value tier1
+  ./wb-cli-test update_tag --path ext_data/data_folder_2/data_folder_4b --key extra --value special
+
+  # Search for the two top-level datasets with position=base
+  [ $(./wb-cli-test find_datasets --tag position=base | jq 'length') == 2 ]
+
+  # Remove one of those tags
+  ./wb-cli-test delete_tag --path ext_data/data_folder_1 --key position
+
+  # Now only one remains
+  [ $(./wb-cli-test find_datasets --tag position=base | jq 'length') == 1 ]
+
+  # Finding tags at nested folders will yield a list which includes the parent
+  [ $(./wb-cli-test find_datasets --tag position=tier1 | jq 'length') == 4 ]
+
+  # Searching for two tags
+  [ $(./wb-cli-test find_datasets --tag position=tier1 extra=special | jq 'length') == 2 ]
+}
