@@ -739,16 +739,13 @@ def change_description(
     )
 
 
-def _change_folder_attribute(
+def _find_folder(
     base_folder=None,
     profile=None,
-    logger=None,
     uuid=None,
-    path=None,
-    key=None,
-    value=None
+    path=None
 ):
-    """Modify the attribute of a folder."""
+    """Find the dataset using either the path or uuid (not both)"""
 
     msg = "Must provide either uuid or path to indicate dataset"
     assert uuid is not None or path is not None, msg
@@ -773,6 +770,9 @@ def _change_folder_attribute(
         # At this point, the path must be a dataset or collection
         assert path_type in ["dataset", "collection"], f"Unrecognized: {path_type}"
 
+        # Read in the index for the folder
+        ix = _read_folder_index(path)
+
     # Otherwise, try finding by uuid
     else:
 
@@ -780,18 +780,123 @@ def _change_folder_attribute(
 
         path, ix = _find_folder_by_uuid(base_folder=base_folder, profile=profile, uuid=uuid)
 
-        # At this point, `path` contains the folder location with the index
-        # object `ix` that has 'uuid' set to `uuid`
+    return path, ix
 
-        logger.info(f"Found dataset {uuid} at {path}")
+def _change_folder_attribute(
+    base_folder=None,
+    profile=None,
+    logger=None,
+    uuid=None,
+    path=None,
+    key=None,
+    value=None
+):
+    """Modify the attribute of a folder."""
+
+    # Find the dataset using either the path or uuid (not both)
+    path, ix = _find_folder(
+        base_folder=base_folder,
+        profile=profile,
+        uuid=uuid,
+        path=path
+    )
+
+    # At this point, `path` contains the folder location with the index
+    # object `ix` that has 'uuid' set to `uuid`
+
+    logger.info(f"Found dataset {uuid} at {path}")
+    
+    # Update the attribute
+    logger.info(f"Changing {key} to {value}")
+    ix[key] = value
+
+    # Save the index
+    logger.info("Saving index")
+    _write_folder_index(path, ix, overwrite=True)
+
         
-        # Update the attribute
-        logger.info(f"Changing {key} to {value}")
-        ix[key] = value
+def update_tag(
+    base_folder=None,
+    profile=None,
+    logger=None,
+    uuid=None,
+    path=None,
+    key=None,
+    value=None
+):
+    """Modify the value of a tag applied to a folder."""
 
-        # Save the index
-        logger.info("Saving index")
-        _write_folder_index(path, ix, overwrite=True)
+    # Find the dataset using either the path or uuid (not both)
+    path, ix = _find_folder(
+        base_folder=base_folder,
+        profile=profile,
+        uuid=uuid,
+        path=path
+    )
+
+    # At this point, `path` contains the folder location with the index
+    # object `ix` that has 'uuid' set to `uuid`
+
+    logger.info(f"Found dataset {uuid} at {path}")
+
+    # Make sure that there is a dict of "tags" in the index
+    ix["tags"] = ix.get("tags", dict())
+
+    assert isinstance(ix["tags"], dict), "Index entry 'tags' must be a dict"
+    
+    # Update the attribute
+    logger.info(f"Changing tag {key} to {value}")
+    ix["tags"][key] = value
+
+    # Save the index
+    logger.info("Saving index")
+    _write_folder_index(path, ix, overwrite=True)
+
+
+def delete_tag(
+    base_folder=None,
+    profile=None,
+    logger=None,
+    uuid=None,
+    path=None,
+    key=None
+):
+    """Delete the value of a tag applied to a folder, if it exists."""
+
+    # Find the dataset using either the path or uuid (not both)
+    path, ix = _find_folder(
+        base_folder=base_folder,
+        profile=profile,
+        uuid=uuid,
+        path=path
+    )
+
+    # At this point, `path` contains the folder location with the index
+    # object `ix` that has 'uuid' set to `uuid`
+
+    logger.info(f"Found dataset {uuid} at {path}")
+
+    # Make sure that there is a dict of "tags" in the index
+    ix["tags"] = ix.get("tags", dict())
+
+    assert isinstance(ix["tags"], dict), "Index entry 'tags' must be a dict"
+    
+    # If the tag is present
+    if key in ix["tags"]:
+
+        # Delete it
+        if logger is not None:
+            logger.info(f"Deleting tag {key}")
+
+        del ix["tags"][key]
+
+    else:
+        if logger is not None:
+            logger.info(f"Tag {key} is not set")
+
+    # Save the index
+    logger.info("Saving index")
+    _write_folder_index(path, ix, overwrite=True)
 
 
 def _find_folder_by_uuid(
@@ -860,6 +965,9 @@ def find_datasets(
 
         # Only keep folders which match this query, or their parent collections
         datasets = _filter_datasets(datasets, field="tag", value=tag, logger=logger)
+
+    if logger is not None:
+        logger.info(f"Number of datasets matching query: {len(datasets):,}")
 
     # If the print format is "json"
     if format == "json":

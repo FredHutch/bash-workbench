@@ -163,6 +163,57 @@ def make_parser():
                 )
             )
         ),
+        dict(
+            key="update_tag",
+            help="""
+            Change the value of a tag for a dataset
+            """,
+            kwargs=dict(
+                uuid=dict(
+                    type=str,
+                    default=None,
+                    help="Specify the dataset to modify by its uuid"
+                ),
+                path=dict(
+                    type=str,
+                    default=None,
+                    help="Specify the dataset to modify by its absolute or relative path"
+                ),
+                key=dict(
+                    type=str,
+                    default=None,
+                    help="Name of the tag"
+                ),
+                value=dict(
+                    type=str,
+                    default=None,
+                    help="Value of the tag"
+                )
+            )
+        ),
+        dict(
+            key="delete_tag",
+            help="""
+            Remove a tag from a dataset if it is present
+            """,
+            kwargs=dict(
+                uuid=dict(
+                    type=str,
+                    default=None,
+                    help="Specify the dataset to modify by its uuid"
+                ),
+                path=dict(
+                    type=str,
+                    default=None,
+                    help="Specify the dataset to modify by its absolute or relative path"
+                ),
+                key=dict(
+                    type=str,
+                    default=None,
+                    help="Name of the tag"
+                )
+            )
+        )
     ]
 
     # Iterate over each of the subcommands
