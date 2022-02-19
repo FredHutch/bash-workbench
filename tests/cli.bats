@@ -100,3 +100,40 @@
   [ $(./wb-cli-test show_datasets | jq 'length') == 3 ]
 
 }
+
+@test "find_datasets" {
+
+  make_dataset(){
+    FP=$1
+    NAME=$2
+    DESC=$3
+
+    echo "FP=$FP"
+    echo "NAME=$NAME"
+    echo "DESC=$DESC"
+
+    mkdir $FP
+    ./wb-cli-test index_dataset --path $FP
+    ./wb-cli-test change_name --path $FP --name $NAME
+    ./wb-cli-test change_description --path $FP --description $DESC
+  }
+
+  # Create another two subfolders inside the previously-created collection
+  make_dataset ext_data/data_folder_2/data_folder_4a 'Data Folder 4A' 'Very Useful Data Folder 4A'
+  make_dataset ext_data/data_folder_2/data_folder_4b 'Data Folder 4B' 'Very Useful Data Folder 4B'
+
+  # Test the find_datasets function based on the number of datasets found
+
+  # Searching for the top-level collection will yield a single result
+  [ $(./wb-cli-test find_datasets --name data_folder_2 | jq 'length') == 1 ]
+
+  # Searching for a subfolder will yield that folder and its parent
+  [ $(./wb-cli-test find_datasets --name data_folder_3 | jq 'length') == 2 ]
+
+  # Searching for a substring shared by two datasets will yield both (and their parent)
+  [ $(./wb-cli-test find_datasets --name Data Folder 4 | jq 'length') == 3 ]
+
+  # Searching the description field will yield the same
+  [ $(./wb-cli-test find_datasets --description Very Useful | jq 'length') == 3 ]
+
+}
