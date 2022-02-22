@@ -163,3 +163,17 @@
   # Searching for two tags
   [ $(./wb-cli-test find_datasets --data --tag position=tier1 extra=special | jq 'length') == 2 ]
 }
+
+@test "list_tools" {
+
+  # List the basic set of tools available from the package
+  [ $(./wb-cli-test list_tools | jq 'length') == 1 ]
+
+}
+
+@test "list_launchers" {
+
+  # List the basic set of launchers available from the package
+  [ $(./wb-cli-test list_launchers | jq 'length') == 1 ]
+
+}

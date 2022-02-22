@@ -1,3 +1,4 @@
+from distutils.command.config import config
 import json
 import os
 import shutil
@@ -1046,3 +1047,72 @@ def _copy_asset(WB, folder, filename, overwrite=False):
     # Copy the file
     WB.log(f"Copying {source_path} to {destination_path}")
     shutil.copyfile(source_path, destination_path, follow_symlinks=True)
+
+
+def list_tools(WB):
+    """List the tools available for creating datasets."""
+
+    return _list_assets(WB, "tools")
+
+
+def list_launchers(WB):
+    """List the launchers available for creating datasets."""
+
+    return _list_assets(WB, "launchers")
+
+
+def _list_assets(WB, asset_type):
+
+    assert asset_type in ["tools", "launchers"]
+
+    # Set up a list for all of the tools
+    asset_list = []
+
+    # Iterate over the folders in the tools/ or launchers/ directory
+    for asset_key in os.listdir(WB._top_level_folder(asset_type)):
+
+        # Read in the configuration for this asset
+        asset_config = _read_asset_config(WB, asset_type, asset_key)
+
+        # Add to the list
+        asset_list.append(asset_config)
+
+    return asset_list
+
+
+def _read_asset_config(WB, asset_type, asset_key):
+    """Read the configuration for a particular type of asset."""
+
+    asset_folder = os.path.join(WB.home_folder, asset_type, asset_key)
+
+    assert os.path.isdir(asset_folder), f"Expected a directory: {asset_folder}"
+
+    # The configuration of the tool/launcher is defined in config.json
+    config_fp = os.path.join(asset_folder, "config.json")
+
+    # The configuration file must exist
+    if not os.path.exists(config_fp):
+        WB.log(f"Could not find {config_fp}")
+
+    # Read the configuration
+    WB.log(f"Parsing {config_fp}")
+    with open(config_fp, "r") as handle:
+        asset_config = json.load(handle)
+
+    _validate_asset_config(WB, asset_config)
+
+    return asset_config
+
+
+def _validate_asset_config(WB, asset_config):
+    """Validate that the tool or launcher is configured correctly"""
+
+    # The asset must contain a handful of elements
+    for key, value_type in [
+        ("name", str),
+        ("description", str),
+        ("args", list)
+    ]:
+
+        assert key in asset_config, f"Asset configuration must contain key '{key}'"
+        assert isinstance(asset_config[key], value_type), f"{key} must be of type {value_type}"

@@ -237,6 +237,20 @@ def make_parser():
                     help="If specified, overwrite any local tools or launchers with the same name"
                 )
             )
+        ),
+        dict(
+            key="list_tools",
+            help="""
+            Print a list of all available tools
+            """,
+            kwargs=dict()
+        ),
+        dict(
+            key="list_launchers",
+            help="""
+            Print a list of all available launchers
+            """,
+            kwargs=dict()
         )
     ]
 
