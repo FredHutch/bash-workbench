@@ -68,55 +68,60 @@ class Workbench:
             **kwargs
         )
 
-    def setup_root_folder(self):
+    def setup_root_folder(self, **kwargs):
         """Ensure that the root folder contains the required assets, and create them if necessary."""
 
-        return self._map_function("setup_root_folder")
+        return self._run_function("setup_root_folder", **kwargs)
 
-    def index_collection(self):
+    def index_collection(self, **kwargs):
         "Add a collection index to a folder in the filesystem."
 
-        return self._map_function("index_collection")
+        return self._run_function("index_collection", **kwargs)
 
-    def index_dataset(self):
+    def index_dataset(self, **kwargs):
         "Add a dataset index to a folder in the filesystem."
 
-        return self._map_function("index_dataset")
+        return self._run_function("index_dataset", **kwargs)
 
-    def show_datasets(self):
+    def show_datasets(self, **kwargs):
         "Print a list of all datasets linked from the home folder."
 
-        return self._map_function("show_datasets")
+        return self._run_function("show_datasets", **kwargs)
 
-    def change_name(self):
+    def change_name(self, **kwargs):
         "Modify the name of a folder (dataset or collection)."
 
-        return self._map_function("change_name")
+        return self._run_function("change_name", **kwargs)
 
-    def change_description(self):
+    def change_description(self, **kwargs):
         "Modify the description of a folder (dataset or collection)."
 
-        return self._map_function("change_description")
+        return self._run_function("change_description", **kwargs)
 
-    def update_tag(self):
+    def update_tag(self, **kwargs):
         "Modify the value of a tag applied to a folder."
 
-        return self._map_function("update_tag")
+        return self._run_function("update_tag", **kwargs)
 
-    def delete_tag(self):
+    def delete_tag(self, **kwargs):
         "Delete the value of a tag applied to a folder, if it exists."
 
-        return self._map_function("delete_tag")
+        return self._run_function("delete_tag", **kwargs)
 
-    def find_datasets(self):
+    def find_datasets(self, **kwargs):
         "Find any datasets which match the provided queries."
 
-        return self._map_function("find_datasets")
+        return self._run_function("find_datasets", **kwargs)
 
     def _top_level_folder(self, folder_name):
         """Return the path to a top-level folder in the home directory."""
 
         return os.path.join(self.home_folder, folder_name)
+
+    def update_base_toolkit(self, **kwargs):
+        """Copy the tools and launchers from the package into the home directory"""
+
+        return self._run_function("update_base_toolkit", **kwargs)
 
 
 class Timestamp():
