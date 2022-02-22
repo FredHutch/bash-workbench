@@ -31,6 +31,13 @@ def make_parser():
         help="Type of filesystem used to store datasets (options: local)."
     )
 
+    parser.add_argument(
+        "--print-format",
+        type=str,
+        default="json",
+        help="Format used to print CLI output (default: json, options: json, yaml)."
+    )
+
     # Add subparsers for each of the commands within the CLI
     subparsers = parser.add_subparsers(
         title="subcommands",
@@ -82,10 +89,10 @@ def make_parser():
             Print the list of all datasets linked to the home directory.
             """,
             kwargs=dict(
-                format=dict(
-                    type=str,
-                    default="json",
-                    help="Format to use for printing"
+                data=dict(
+                    action="store_false",
+                    dest="show_tree",
+                    help="If specified, print the raw data (default is a tree representation of the datasets)"
                 )
             )
         ),
@@ -113,10 +120,10 @@ def make_parser():
                     nargs="+",
                     help="Only show datasets with this tag (specify one or more as 'KEY1=VALUE1 KEY2=VALUE2')"
                 ),
-                format=dict(
-                    type=str,
-                    default="json",
-                    help="Format to use for printing"
+                data=dict(
+                    action="store_false",
+                    dest="show_tree",
+                    help="If specified, print the raw data (default is a tree representation of the datasets)"
                 )
             )
         ),

@@ -97,7 +97,7 @@
 
   # List all indexed folders
   # Make sure that all three folders are found
-  [ $(./wb-cli-test show_datasets | jq 'length') == 3 ]
+  [ $(./wb-cli-test show_datasets --data | jq 'length') == 3 ]
 
 }
 
@@ -125,16 +125,16 @@
   # Test the find_datasets function based on the number of datasets found
 
   # Searching for the top-level collection will yield a single result
-  [ $(./wb-cli-test find_datasets --name data_folder_2 | jq 'length') == 1 ]
+  [ $(./wb-cli-test find_datasets --data --name data_folder_2 | jq 'length') == 1 ]
 
   # Searching for a subfolder will yield that folder and its parent
-  [ $(./wb-cli-test find_datasets --name data_folder_3 | jq 'length') == 2 ]
+  [ $(./wb-cli-test find_datasets --data --name data_folder_3 | jq 'length') == 2 ]
 
   # Searching for a substring shared by two datasets will yield both (and their parent)
-  [ $(./wb-cli-test find_datasets --name Data Folder 4 | jq 'length') == 3 ]
+  [ $(./wb-cli-test find_datasets --data --name Data Folder 4 | jq 'length') == 3 ]
 
   # Searching the description field will yield the same
-  [ $(./wb-cli-test find_datasets --description Very Useful | jq 'length') == 3 ]
+  [ $(./wb-cli-test find_datasets --data --description Very Useful | jq 'length') == 3 ]
 
 }
 
@@ -149,17 +149,17 @@
   ./wb-cli-test update_tag --path ext_data/data_folder_2/data_folder_4b --key extra --value special
 
   # Search for the two top-level datasets with position=base
-  [ $(./wb-cli-test find_datasets --tag position=base | jq 'length') == 2 ]
+  [ $(./wb-cli-test find_datasets --data --tag position=base | jq 'length') == 2 ]
 
   # Remove one of those tags
   ./wb-cli-test delete_tag --path ext_data/data_folder_1 --key position
 
   # Now only one remains
-  [ $(./wb-cli-test find_datasets --tag position=base | jq 'length') == 1 ]
+  [ $(./wb-cli-test find_datasets --data --tag position=base | jq 'length') == 1 ]
 
   # Finding tags at nested folders will yield a list which includes the parent
-  [ $(./wb-cli-test find_datasets --tag position=tier1 | jq 'length') == 4 ]
+  [ $(./wb-cli-test find_datasets --data --tag position=tier1 | jq 'length') == 4 ]
 
   # Searching for two tags
-  [ $(./wb-cli-test find_datasets --tag position=tier1 extra=special | jq 'length') == 2 ]
+  [ $(./wb-cli-test find_datasets --data --tag position=tier1 extra=special | jq 'length') == 2 ]
 }

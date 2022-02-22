@@ -1,4 +1,6 @@
 import bash_workbench as wb
+import json
+import yaml
 
 def cli():
     
@@ -14,30 +16,52 @@ def cli():
         log_fp=None,       # Do not write to a file
     )
 
-    # The function to run will be determined by the --filesystem
-    # as well as the subcommand. The pattern used to map the CLI
-    # command to the exact function in the library is:
-    # wb.utils.filesystem.<filesystem>.<subcommand>
+    # Set up a Workbench object
+    WB = wb.utils.workbench.Workbench(
+        base_folder=args.base_folder,
+        profile=args.profile,
+        filesystem=args.filesystem,
+        logger=logger
+    )
 
-    # First get the module used for this filesystem
-    filesystem_lib = wb.utils.filesystem.__dict__.get(args.filesystem)
-
-    assert filesystem_lib is not None, f"Cannot find filesystem module {args.filesystem}"
-
-    # Next, get the function defined in that module
-    func = filesystem_lib.__dict__.get(args.func)
-
-    assert func is not None, f"Cannot find function {args.func} for filesystem {args.filesystem}"
-
-    # Run the function which was selected by the user
-    func(
-        # Every function takes a logger
-        logger=logger,
-        # Pass through all of the command line argument, except for the
-        # 'func' key, which maps to the function which should be invoked
+    # Run the specified command, passing through the arguments
+    # which were not used to specify the configuration of the
+    # Workbench object itself
+    r = WB._run_function(
+        args.func,
         **{
             k: v
             for k, v in args.__dict__.items()
-            if k not in ["func", "filesystem"]
+            if k not in [
+                "func",
+                "filesystem",
+                "base_folder",
+                "profile",
+                "print_format"
+            ]
         }
     )
+
+    # Print the returned value of the function, if there is any
+
+    # If no value was returned
+    if r is None:
+        WB.log("Returned value is null, skipping printing to screen")
+
+    # If there is a value which was returned
+    else:
+
+        # Transform the data into a string based on the serialization
+        # method specified by the user
+
+        print_funcs = dict(
+            json = lambda r: print(json.dumps(r, indent=4)),
+            yaml = lambda r: print(yaml.dump(r))
+        )
+
+        # Make sure that --print_format is defined as one of the keys above
+        msg = f"--print_format must be one of '{', '.join(list(print_funcs.keys()))}', not '{args.print_format}'"
+        assert args.print_format in print_funcs, msg
+
+        # Invoke the function
+        print_funcs[args.print_format](r)

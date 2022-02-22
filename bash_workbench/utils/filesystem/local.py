@@ -4,105 +4,79 @@ import os
 import uuid
 
 
-def setup_root_folder(base_folder=None, profile=None, logger=None):
+def setup_root_folder(WB):
     """Ensure that the root folder contains the required assets, and create them if necessary."""
 
-    # The user must provide the base folder
-    assert base_folder is not None, "Must provide base_folder"
-
-    # The user must provide the profile
-    assert profile is not None, "Must provide profile"
-
-    # Construct the root folder from the base folder and profile
-    root_folder = os.path.join(base_folder, profile)
-
-    if logger is not None:
-        logger.info(f"Setting up root folder at {root_folder}")
+    WB.log(f"Setting up root folder at {WB.home_folder}")
 
     # If the root folder does not exist
-    if not os.path.exists(root_folder):
+    if not os.path.exists(WB.home_folder):
 
         # Create it
-        os.makedirs(root_folder)
-        if logger is not None:
-            logger.info(f"Created {root_folder}")
+        os.makedirs(WB.home_folder)
+        WB.log(f"Created {WB.home_folder}")
     
     else:
 
-        if logger is not None:
-            logger.info(f"Exists {root_folder}")
+        WB.log(f"Exists {WB.home_folder}")
 
     # For each of a series of subfolders
     for subfolder in ["data", "configs", "tools"]:
 
         # Construct the path for this subfolder inside the root folder
-        fp = os.path.join(root_folder, subfolder)
+        fp = os.path.join(WB.home_folder, subfolder)
 
         # If the path does not exist
         if not os.path.exists(fp):
 
             # Create it
             os.makedirs(fp)
-            if logger is not None:
-                logger.info(f"Created {fp}")
+            WB.log(f"Created {fp}")
 
         else:
-            if logger is not None:
-                logger.info(f"Exists: {fp}")
+            WB.log(f"Exists: {fp}")
 
 
 def index_collection(
-    path:str=None,
-    base_folder:str=None,
-    profile:str=None,
-    logger=None
+    WB,
+    path:str=None
 ):
     """Add a collection index to a folder in the filesystem."""
 
     assert path is not None, "Must provide --path for folder to index"
 
-    if logger is not None:
-        logger.info(f"Preparing to index collection located at {path}")
+    WB.log(f"Preparing to index collection located at {path}")
 
     # Run the method which can be used to index either a collection or a collection
-    _index_folder(
+    return _index_folder(
+        WB,
         ix_type="collection",
-        path=path,
-        base_folder=base_folder,
-        profile=profile,
-        logger=logger
+        path=path
     )
 
 
 def index_dataset(
-    path:str=None,
-    base_folder:str=None,
-    profile:str=None,
-    logger=None
+    WB,
+    path:str=None
 ):
     """Add a dataset index to a folder in the filesystem."""
 
     assert path is not None, "Must provide --path for folder to index"
 
-    if logger is not None:
-        logger.info(f"Preparing to index dataset located at {path}")
+    WB.log(f"Preparing to index dataset located at {path}")
 
     # Run the method which can be used to index either a collection or a dataset
-    _index_folder(
+    return _index_folder(
+        WB,
         ix_type="dataset",
-        path=path,
-        base_folder=base_folder,
-        profile=profile,
-        logger=logger
+        path=path
     )
 
 
 def _index_folder(
+    WB,
     ix_type:str=None,
-    path:str=None,
-    base_folder:str=None,
-    profile:str=None,
-    logger=None
+    path:str=None
 ):
 
     # ix_type can only be 'dataset' or 'collection'
@@ -136,7 +110,7 @@ def _index_folder(
     index = dict(
         uuid=str(uuid.uuid4()),
         type=ix_type,
-        indexed_at=_timestamp().encode(),
+        indexed_at=WB.timestamp.encode(),
         name=_sanitize_path(path).rsplit("/", 1)[-1],
         description=""
     )
@@ -144,31 +118,32 @@ def _index_folder(
     # Write it to the file
     _write_folder_index(path, index)
     
-    if logger is not None:
-        logger.info(f"Wrote out index for {path}")
+    WB.log(f"Wrote out index for {path}")
 
     # Finally, link this dataset to the home folder if it is not already
     # nested below a collection which is similarly linked
-    _add_to_home_tree(path=path, base_folder=base_folder, profile=profile, logger=logger)
+    _add_to_home_tree(WB, path=path)
+
+    return index
 
 
-def _add_to_home_tree(path=None, base_folder=None, profile=None, logger=None):
+def _add_to_home_tree(WB, path=None):
     """If a folder is not already contained in the home tree, add it."""
 
     assert path is not None, "Must provide --path of folder to add to home"
-    assert base_folder is not None, "Must provide --base_folder of home directory"
-    assert profile is not None, "Must provide --profile of home directory"
+    assert WB.base_folder is not None, "Must provide --base_folder of home directory"
+    assert WB.profile is not None, "Must provide --profile of home directory"
 
     # Resolve symlinks and remove any terminal slashes
     path = _sanitize_path(path)
 
-    logger.info(f"Making sure that folder is present in home tree: {path}")
+    WB.log(f"Making sure that folder is present in home tree: {path}")
 
     # Keep track of whether we've seen this path
     path_seen = False
 
     # Iterate over each of the folders in the home tree
-    for wb_folder in _walk_home_tree(base_folder=base_folder, profile=profile):
+    for wb_folder in _walk_home_tree(WB):
 
         # If we come across this folder
         if wb_folder == path:
@@ -182,24 +157,19 @@ def _add_to_home_tree(path=None, base_folder=None, profile=None, logger=None):
     # If the path was found
     if path_seen:
 
-        if logger is not None:
-            logger.info(f"Path already contained in home tree ({path})")
+        WB.log(f"Path already contained in home tree ({path})")
 
     # If it was not found
     else:
 
         # Link the folder to the home directory
-        _link_to_home(path=path, base_folder=base_folder, profile=profile)
+        _link_to_home(WB, path=path)
 
-        if logger is not None:
-            logger.info(f"Link for path added to home tree ({path})")
+        WB.log(f"Link for path added to home tree ({path})")
 
 
-def _walk_home_tree(base_folder=None, profile=None):
+def _walk_home_tree(WB):
     """Walk through all of the indexed folders which are linked anywhere within the home folder."""
-
-    assert base_folder is not None, "Must provide --base_folder of home directory"
-    assert profile is not None, "Must provide --profile of home directory"
 
     # Keep track of all of the folders which we've found before
     seen_folders = set()
@@ -208,9 +178,7 @@ def _walk_home_tree(base_folder=None, profile=None):
     folders_to_check = list()
 
     # To start, add the home folder to the list of folders to check
-    folders_to_check.append(
-        os.path.join(base_folder, profile, "data")
-    )
+    folders_to_check.append(WB._top_level_folder("data"))
 
     # Iterate while there are folders remaining to check
     while len(folders_to_check) > 0:
@@ -242,14 +210,11 @@ def _walk_home_tree(base_folder=None, profile=None):
                 folders_to_check.append(subpath)
 
 
-def _links_from_home_directory(base_folder=None, profile=None):
+def _links_from_home_directory(WB):
     """Return the list of folders which are linked from the home data directory."""
 
-    assert profile is not None, "Must provide --profile of home directory"
-    assert base_folder is not None, "Must provide --base_folder of home directory"
-
     # Assemble the path to the home data directory
-    data_home = os.path.join(base_folder, profile, "data")
+    data_home = WB._top_level_folder("data")
 
     # Make a list of the linked folders
     linked_folders = list()
@@ -276,18 +241,14 @@ def _links_from_home_directory(base_folder=None, profile=None):
     return linked_folders
 
 
-def _link_to_home(path=None, base_folder=None, profile=None):
+def _link_to_home(WB, path=None):
     """Add a symlinnk of a path to the home directory."""
-
-    assert path is not None, "Must provide --path of folder to link to home"
-    assert base_folder is not None, "Must provide --base_folder of home directory"
-    assert profile is not None, "Must provide --profile of home directory"
 
     # Resolve symlinks and remove any terminal slashes
     path = _sanitize_path(path)
 
     # If there is a link to this folder already in the home directory
-    if path in _links_from_home_directory(base_folder=base_folder, profile=profile):
+    if path in _links_from_home_directory(WB):
 
         # No need to take any further action
         return
@@ -296,12 +257,7 @@ def _link_to_home(path=None, base_folder=None, profile=None):
     folder_name = path.rsplit("/", 1)[1]
 
     # Get the path to the symlink
-    home_symlink = os.path.join(
-        base_folder,
-        profile,
-        "data",
-        folder_name
-    )
+    home_symlink = WB._top_level_folder(f"data/{folder_name}")
 
     # To prevent collisions, add a suffix to make it unique (if not already)
     n = 0
@@ -311,11 +267,7 @@ def _link_to_home(path=None, base_folder=None, profile=None):
         n += 1
 
         # Make a new the path to the symlink
-        home_symlink = os.path.join(
-            base_folder,
-            profile,
-            f"{folder_name}_{n}"
-        )
+        home_symlink = WB._top_level_folder(f"{folder_name}_{n}")
 
     # Add a symlink
     os.symlink(path, home_symlink)
@@ -464,28 +416,6 @@ def _write_folder_index(path, dat, overwrite=False, indent=4):
         json.dump(dat, handle, indent=indent)
 
 
-class _timestamp():
-    """Encode / decode a date and time to / from string format."""
-
-    def __init__(self, fmt="%Y-%m-%d %H:%M:%S %Z"):
-        
-        self.fmt = fmt
-
-    def encode(self):
-        """Return a string representation of the current date and time."""
-
-        # Current date and time
-        now = datetime.datetime.now(datetime.timezone.utc)
-
-        # Return a string formatted using the pattern shown above
-        return now.strftime(self.fmt)
-
-    def decode(self, timestamp_str):
-        """Return the date and time represented by a string."""
-
-        return datetime.strptime(timestamp_str, self.fmt)
-
-
 def _map_wb_file_path(folder, filename, workbench_prefix="._wb_"):
     """All Workbench files share a common prefix to prevent collision."""
 
@@ -495,27 +425,25 @@ def _map_wb_file_path(folder, filename, workbench_prefix="._wb_"):
 
 
 def show_datasets(
-    base_folder=None,
-    profile=None,
-    logger=None,
-    format:str=None,
-    json_indent:int=4
+    WB,
+    show_tree=False
 ):
     """Print a list of all datasets linked from the home folder."""
 
     # Get the list of all datasets linked from the home folder
-    datasets = _list_datasets(base_folder=base_folder, profile=profile, logger=logger)
+    datasets = _list_datasets(WB)
 
-    # If the print format is "json"
-    if format == "json":
+    # If the tree representation was requested
+    if show_tree:
 
-        # Print the list of datasets in JSON format
-        print(json.dumps(datasets, indent=json_indent))
-
-    # If the print format is "tree"
-    elif format == "tree":
-
+        # Print the tree
         _print_dataset_tree(datasets)
+
+    # Otherwise
+    else:
+
+        # Return the list of datasets found
+        return datasets
 
 
 def _print_dataset_tree(datasets):
@@ -626,18 +554,11 @@ def _print_dataset_tree_single(
         print(f"{indentation}{addl_prefix}  {field}")
     
 
-def _list_datasets(
-    base_folder=None,
-    profile=None,
-    logger=None):
+def _list_datasets(WB):
     """Return the list of all datasets and collections linked from the home folder."""
 
-    # The user must provide the base folder and profile
-    assert base_folder is not None, "Must provide base_folder"
-    assert profile is not None, "Must provide profile"
-
     # Get the list of all folders which are linked under the home directory and have an index
-    datasets = list(_walk_home_tree(base_folder=base_folder, profile=profile))
+    datasets = list(_walk_home_tree(WB))
 
     # Get the details for each one, and add information about each subfolder
     dataset_info = [
@@ -665,8 +586,7 @@ def _list_datasets(
             # Add the dataset uuid to the 'parent' field in the child
             dataset_info[child_uuid]["parent"] = dataset_uuid
 
-    if logger is not None:
-        logger.info(f"Found {len(dataset_info):,} indexed folders")
+    WB.log(f"Found {len(dataset_info):,} indexed folders")
 
     return dataset_info
 
@@ -698,19 +618,15 @@ def _list_children(fp):
 
 
 def change_name(
-    base_folder=None,
-    profile=None,
-    logger=None,
+    WB,
     uuid=None,
     path=None,
     name=None,
 ):
     """Modify the name of a folder (dataset or collection)."""
 
-    _change_folder_attribute(
-        base_folder=base_folder,
-        profile=profile,
-        logger=logger,
+    return _change_folder_attribute(
+        WB,
         uuid=uuid,
         path=path,
         key="name",
@@ -720,19 +636,15 @@ def change_name(
 
 
 def change_description(
-    base_folder=None,
-    profile=None,
-    logger=None,
+    WB,
     uuid=None,
     path=None,
     description=None,
 ):
     """Modify the description of a folder (dataset or collection)."""
 
-    _change_folder_attribute(
-        base_folder=base_folder,
-        profile=profile,
-        logger=logger,
+    return _change_folder_attribute(
+        WB,
         uuid=uuid,
         path=path,
         key="description",
@@ -742,8 +654,7 @@ def change_description(
 
 
 def _find_folder(
-    base_folder=None,
-    profile=None,
+    WB,
     uuid=None,
     path=None
 ):
@@ -780,15 +691,13 @@ def _find_folder(
 
         assert uuid is not None
 
-        path, ix = _find_folder_by_uuid(base_folder=base_folder, profile=profile, uuid=uuid)
+        path, ix = _find_folder_by_uuid(WB, uuid=uuid)
 
     return path, ix
 
 
 def _change_folder_attribute(
-    base_folder=None,
-    profile=None,
-    logger=None,
+    WB,
     uuid=None,
     path=None,
     key=None,
@@ -798,8 +707,7 @@ def _change_folder_attribute(
 
     # Find the dataset using either the path or uuid (not both)
     path, ix = _find_folder(
-        base_folder=base_folder,
-        profile=profile,
+        WB,
         uuid=uuid,
         path=path
     )
@@ -807,21 +715,21 @@ def _change_folder_attribute(
     # At this point, `path` contains the folder location with the index
     # object `ix` that has 'uuid' set to `uuid`
 
-    logger.info(f"Found dataset {uuid} at {path}")
+    WB.log(f"Found dataset {ix['uuid']} at {path}")
     
     # Update the attribute
-    logger.info(f"Changing {key} to {value}")
+    WB.log(f"Changing {key} to {value}")
     ix[key] = value
 
     # Save the index
-    logger.info("Saving index")
+    WB.log("Saving index")
     _write_folder_index(path, ix, overwrite=True)
+
+    return ix
 
         
 def update_tag(
-    base_folder=None,
-    profile=None,
-    logger=None,
+    WB,
     uuid=None,
     path=None,
     key=None,
@@ -831,8 +739,7 @@ def update_tag(
 
     # Find the dataset using either the path or uuid (not both)
     path, ix = _find_folder(
-        base_folder=base_folder,
-        profile=profile,
+        WB,
         uuid=uuid,
         path=path
     )
@@ -840,7 +747,7 @@ def update_tag(
     # At this point, `path` contains the folder location with the index
     # object `ix` that has 'uuid' set to `uuid`
 
-    logger.info(f"Found dataset {uuid} at {path}")
+    WB.log(f"Found dataset {ix['uuid']} at {path}")
 
     # Make sure that there is a dict of "tags" in the index
     ix["tags"] = ix.get("tags", dict())
@@ -848,18 +755,19 @@ def update_tag(
     assert isinstance(ix["tags"], dict), "Index entry 'tags' must be a dict"
     
     # Update the attribute
-    logger.info(f"Changing tag {key} to {value}")
+    WB.log(f"Changing tag {key} to {value}")
     ix["tags"][key] = value
 
     # Save the index
-    logger.info("Saving index")
+    WB.log("Saving index")
     _write_folder_index(path, ix, overwrite=True)
+
+    # Return the updated index
+    return ix
 
 
 def delete_tag(
-    base_folder=None,
-    profile=None,
-    logger=None,
+    WB,
     uuid=None,
     path=None,
     key=None
@@ -868,8 +776,7 @@ def delete_tag(
 
     # Find the dataset using either the path or uuid (not both)
     path, ix = _find_folder(
-        base_folder=base_folder,
-        profile=profile,
+        WB,
         uuid=uuid,
         path=path
     )
@@ -877,7 +784,7 @@ def delete_tag(
     # At this point, `path` contains the folder location with the index
     # object `ix` that has 'uuid' set to `uuid`
 
-    logger.info(f"Found dataset {uuid} at {path}")
+    WB.log(f"Found dataset {ix['uuid']} at {path}")
 
     # Make sure that there is a dict of "tags" in the index
     ix["tags"] = ix.get("tags", dict())
@@ -888,32 +795,29 @@ def delete_tag(
     if key in ix["tags"]:
 
         # Delete it
-        if logger is not None:
-            logger.info(f"Deleting tag {key}")
+        WB.log(f"Deleting tag {key}")
 
         del ix["tags"][key]
 
     else:
-        if logger is not None:
-            logger.info(f"Tag {key} is not set")
+        WB.log(f"Tag {key} is not set")
 
     # Save the index
-    logger.info("Saving index")
+    WB.log("Saving index")
     _write_folder_index(path, ix, overwrite=True)
 
+    # Return the updated index
+    return ix
 
 def _find_folder_by_uuid(
-    base_folder=None,
-    profile=None,
+    WB,
     uuid=None
 ):
-    assert base_folder is not None, "Must provide base_folder"
-    assert profile is not None, "Must provide profile"
     assert uuid is not None, "Must provide uuid"
 
     # Walk through all of the indexed folders in the home tree
     found_path = False
-    for path in _walk_home_tree(base_folder=base_folder, profile=profile):
+    for path in _walk_home_tree(WB):
 
         # Read the index
         ix = _read_folder_index(path)
@@ -933,14 +837,11 @@ def _find_folder_by_uuid(
 
 
 def find_datasets(
-    base_folder=None,
-    profile=None,
+    WB,
     name=None,
     description=None,
     tag=None,
-    logger=None,
-    format:str=None,
-    json_indent:int=4
+    show_tree=False
 ):
     """Find any datasets which match the provided queries."""
 
@@ -949,7 +850,7 @@ def find_datasets(
     assert name is not None or description is not None or tag is not None, msg
 
     # Get the list of all datasets linked from the home folder
-    datasets = _list_datasets(base_folder=base_folder, profile=profile, logger=logger)
+    datasets = _list_datasets(WB)
 
     # If a query name was provided
     if name is not None:
@@ -958,11 +859,10 @@ def find_datasets(
         if isinstance(name, list):
             name = " ".join(name)
 
-        if logger is not None:
-            logger.info(f"Querying datasets by name={name}")
+        WB.log(f"Querying datasets by name={name}")
 
         # Only keep folders which match this query, or their parent collections
-        datasets = _filter_datasets(datasets, field="name", value=name, logger=logger)
+        datasets = _filter_datasets(datasets, field="name", value=name)
 
     # If a query description was provided
     if description is not None:
@@ -971,11 +871,10 @@ def find_datasets(
         if isinstance(description, list):
             description = " ".join(description)
 
-        if logger is not None:
-            logger.info(f"Querying datasets by description={description}")
+        WB.log(f"Querying datasets by description={description}")
 
         # Only keep folders which match this query, or their parent collections
-        datasets = _filter_datasets(datasets, field="description", value=description, logger=logger)
+        datasets = _filter_datasets(datasets, field="description", value=description)
 
     # If a query tag was provided
     if tag is not None:
@@ -987,28 +886,27 @@ def find_datasets(
         # Iterate over the multiple tags which may have been provided
         for tag_item in tag:
 
-            if logger is not None:
-                logger.info(f"Querying datasets by tag {tag_item}")
+            WB.log(f"Querying datasets by tag {tag_item}")
 
             # Only keep folders which match this query, or their parent collections
-            datasets = _filter_datasets(datasets, field="tag", value=tag_item, logger=logger)
+            datasets = _filter_datasets(datasets, field="tag", value=tag_item)
 
-    if logger is not None:
-        logger.info(f"Number of datasets matching query: {len(datasets):,}")
+    WB.log(f"Number of datasets matching query: {len(datasets):,}")
 
-    # If the print format is "json"
-    if format == "json":
+    # If the tree representation was requested
+    if show_tree:
 
-        # Print the list of datasets in JSON format
-        print(json.dumps(datasets, indent=json_indent))
-
-    # If the print format is "tree"
-    elif format == "tree":
-
+        # Print the tree
         _print_dataset_tree(datasets)
 
+    # Otherwise
+    else:
 
-def _filter_datasets(datasets, field=None, value=None, logger=None):
+        # Return the list of datasets found
+        return datasets
+
+
+def _filter_datasets(datasets, field=None, value=None):
     """Filter by a single query term."""
 
     # For tags, the 'value' must be "{key}={value}"
