@@ -1,5 +1,6 @@
 import bash_workbench as wb
 import datetime
+from importlib_resources import files
 import os
 
 class Workbench:
@@ -31,6 +32,10 @@ class Workbench:
         self.verbose = verbose
         self.timestamp = Timestamp()
 
+        # Get the folder which contains assets installed with this package
+        self.assets_folder = files("bash_workbench").joinpath('assets')
+
+
     def log(self, msg):
         """Print a logging message using the logger if available, and the screen if `verbose`."""
 
@@ -57,8 +62,6 @@ class Workbench:
         func = filesystem_lib.__dict__.get(func)
 
         assert func is not None, f"Cannot find function {self.func} for filesystem {self.filesystem}"
-
-        self.log(kwargs)
 
         # Run the function which was selected by the user
         return func(

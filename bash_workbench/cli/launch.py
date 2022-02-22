@@ -44,12 +44,8 @@ def cli():
 
     # Print the returned value of the function, if there is any
 
-    # If no value was returned
-    if r is None:
-        WB.log("Returned value is null, skipping printing to screen")
-
     # If there is a value which was returned
-    else:
+    if r is not None:
 
         # Transform the data into a string based on the serialization
         # method specified by the user

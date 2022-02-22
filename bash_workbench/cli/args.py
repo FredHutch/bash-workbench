@@ -225,6 +225,18 @@ def make_parser():
                     help="Name of the tag"
                 )
             )
+        ),
+        dict(
+            key="update_base_toolkit",
+            help="""
+            Copy all tools and launchers from the repository into the home directory
+            """,
+            kwargs=dict(
+                overwrite=dict(
+                    action="store_true",
+                    help="If specified, overwrite any local tools or launchers with the same name"
+                )
+            )
         )
     ]
 

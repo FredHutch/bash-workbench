@@ -1,0 +1,21 @@
+{
+    "name": "Create Compressed Archive (tar.gz)",
+    "description": "Combine all of the files in a folder into a single gzip-compressed tarball",
+    "args": [
+        {
+            "name": "archive",
+            "description": "Base name of archive file (to which .tar.gz will be appended)",
+            "env": "ARCHIVE",
+            "type": "string",
+            "required": true
+        },
+        {
+            "name": "target",
+            "description": "Directory targeted for compression (all subfolders will be included recursively).",
+            "env": "TARGET",
+            "type": "folder",
+            "required": true,
+            "multiple": false
+        }
+    ]
+}

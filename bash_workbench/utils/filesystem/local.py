@@ -1,6 +1,6 @@
-import datetime
 import json
 import os
+import shutil
 import uuid
 
 
@@ -21,7 +21,7 @@ def setup_root_folder(WB):
         WB.log(f"Exists {WB.home_folder}")
 
     # For each of a series of subfolders
-    for subfolder in ["data", "configs", "tools"]:
+    for subfolder in ["data", "launchers", "tools", "helpers"]:
 
         # Construct the path for this subfolder inside the root folder
         fp = os.path.join(WB.home_folder, subfolder)
@@ -36,6 +36,9 @@ def setup_root_folder(WB):
         else:
             WB.log(f"Exists: {fp}")
 
+    # Provide each of the tools and launchers defined in the repository,
+    # if they do not already exist
+    update_base_toolkit(WB, overwrite=False)
 
 def index_collection(
     WB,
@@ -968,3 +971,78 @@ def _filter_datasets(datasets, field=None, value=None):
             datasets[dataset_uuid]["children"] = list(set(datasets[dataset_uuid]["children"]) & to_keep)
 
     return datasets
+
+
+def update_base_toolkit(WB, overwrite=False):
+    """Copy all tools and launchers from the repository into the home directory."""
+
+    # Copy all files in helpers/ which end with .sh
+    for filename in os.listdir(os.path.join(WB.assets_folder, "helpers")):
+
+        if not filename.endswith(".sh"):
+            WB.log(f"File does not end with .sh, skipping ({filename})")
+            continue
+
+        # Copy the asset from the package to the home directory
+        _copy_asset(WB, "helpers", filename, overwrite=overwrite)
+
+    # Copy the folders within the launchers/ and tools/ folders
+    for asset_type in ["launchers", "tools"]:
+
+        # Iterate over each of the tools or launchers
+        for asset_name in os.listdir(os.path.join(WB.assets_folder, asset_type)):
+
+            # Reconstruct the full path
+            asset_path = os.path.join(WB.assets_folder, asset_type, asset_name)
+
+            # If the asset is not a folder
+            if not os.path.isdir(asset_path):
+                # Skip it
+                continue
+
+            # Iterate over each of the files in that folder
+            for filename in os.listdir(asset_path):
+
+                # Copy the asset from the package to the home directory
+                _copy_asset(
+                    WB,
+                    f"{asset_type}/{asset_name}",
+                    filename,
+                    overwrite=overwrite
+                )
+
+
+def _copy_asset(WB, folder, filename, overwrite=False):
+
+    # The destination folder is in the home directory
+    destination_folder = os.path.join(WB.home_folder, folder)
+    destination_path = os.path.join(destination_folder, filename)
+
+    # If the folder does not exist
+    if not os.path.exists(destination_folder):
+
+        # Create it
+        os.makedirs(destination_folder)
+
+    # If the path to the folder does exist
+    else:
+
+        # Make sure the path does point to a folder
+        assert os.path.isdir(destination_folder), f"Expected to find a folder: {destination_folder}"
+
+    # If the file already exists
+    if os.path.exists(destination_path):
+
+        # If the overwrite flag was not set
+        if not overwrite:
+
+            # Do not take any action
+            WB.log(f"File already exists: {destination_path}")
+            return
+
+    # At this point, either the destination_path does not exist, or --overwrite was set
+    source_path = os.path.join(WB.assets_folder, folder, filename)
+
+    # Copy the file
+    WB.log(f"Copying {source_path} to {destination_path}")
+    shutil.copyfile(source_path, destination_path, follow_symlinks=True)

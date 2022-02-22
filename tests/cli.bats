@@ -21,7 +21,7 @@
   # Validate that all files were created as appropriate
   [ -d base_folder ]
   [ -d base_folder/test ]
-  [ -d base_folder/test/configs ]
+  [ -d base_folder/test/launchers ]
   [ -d base_folder/test/data ]
   [ -d base_folder/test/tools ]
 }
