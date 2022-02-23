@@ -5,6 +5,16 @@ import bash_workbench as wb
 def make_parser():
     """Return a base parser used to format command line arguments for the Workbench CLI."""
 
+    # Before setting up the parser, read any asset configurations from the current working directory
+    asset_configs = {
+        asset_type: wb.utils.filesystem.local._read_dataset_asset_config(os.getcwd(), asset_type)
+        for asset_type in ["tools", "launchers"]
+    }
+    asset_configs = {
+        k: v["args"] if v is not None and v.get("args") is not None else {}
+        for k, v in asset_configs.items()
+    }
+
     parser = argparse.ArgumentParser(
         description="Command Line Interface for the BASH Workbench"
     )
@@ -284,6 +294,34 @@ def make_parser():
                     help="If specified, overwrite any local tools or launchers in the folder"
                 )
             )
+        ),
+        dict(
+            key="set_tool_params",
+            help="""
+            Set the parameters used to run the tool in a particular dataset
+            """,
+            kwargs={
+                "path": dict(
+                    type=str,
+                    default=os.getcwd(),
+                    help="Dataset folder to be configured"
+                ),
+                **asset_configs["tools"]
+            }
+        ),
+        dict(
+            key="set_launcher_params",
+            help="""
+            Set the parameters used to run the launcher in a particular dataset
+            """,
+            kwargs={
+                "path": dict(
+                    type=str,
+                    default=os.getcwd(),
+                    help="Dataset folder to be configured"
+                ),
+                **asset_configs["launchers"]
+            }
         )
     ]
 
@@ -301,13 +339,18 @@ def make_parser():
         )
 
         # Iterate over any kwargs, if any
-        for key, params in command_info.get("kwargs", {}).items():
+        if command_info.get("kwargs") is not None:
+            for key, params in command_info["kwargs"].items():
 
-            # Add the params for that kwarg, which applies to only this command
-            command_info["parser"].add_argument(
-                f"--{key}",
-                **params
-            )
+                # Add the params for that kwarg, which applies to only this command
+                command_info["parser"].add_argument(
+                    f"--{key}",
+                    **{
+                        k: v
+                        for k, v in params.items()
+                        if not k.startswith("wb_")
+                    }
+                )
 
         # Add the default function
         command_info["parser"].set_defaults(

@@ -182,3 +182,40 @@
   wb setup_dataset --path ext_data/data_folder_1 --tool make_tar_gz --launcher base
   
 }
+
+@test "set_tool_params" {
+
+  # Make a separate folder with some dummy data files
+  mkdir ext_data/unindexed_data_folder_A
+  echo FOO > ext_data/unindexed_data_folder_A/foo.txt
+  echo BAR > ext_data/unindexed_data_folder_A/bar.txt
+
+  # Move into the dataset that we've set up with the `make_tar_gz` tool
+  cd ext_data/data_folder_1
+
+  # Make sure that we can parse the arguments from this tool
+  wb set_tool_params --help
+
+  # Set the params on the command line
+  wb set_tool_params --archive TEST_ARCHIVE --target ../unindexed_data_folder_A
+
+  # A params file should have been created
+  [ -s ._wb_tools_params.json ]
+
+}
+
+@test "set_launcher_params" {
+
+  # Move into the dataset that we've set up with the `make_tar_gz` launcher
+  cd ext_data/data_folder_1
+
+  # Make sure that we can parse the arguments from this launcher
+  wb set_launcher_params --help
+
+  # Set the params on the command line (there are none for the base launcher)
+  wb set_launcher_params
+
+  # A params file should have been created
+  [ -s ._wb_launchers_params.json ]
+  
+}

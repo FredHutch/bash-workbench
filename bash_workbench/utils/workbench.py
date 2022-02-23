@@ -126,6 +126,16 @@ class Workbench:
 
         return self._run_function("update_base_toolkit", **kwargs)
 
+    def set_tool_params(self, **kwargs):
+        """Set the parameters used to run the tool in a particular dataset"""
+
+        return self._run_function("set_tool_params", **kwargs)
+
+    def set_launcher_params(self, **kwargs):
+        """Set the parameters used to run the launcher in a particular dataset"""
+
+        return self._run_function("set_launcher_params", **kwargs)
+
 
 class Timestamp():
     """Encode / decode a date and time to / from string format."""

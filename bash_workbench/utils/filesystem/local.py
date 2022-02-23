@@ -1207,7 +1207,7 @@ def _list_assets(WB, asset_type):
 
 
 def _read_asset_config(WB, asset_type, asset_key):
-    """Read the configuration for a particular type of asset."""
+    """Read the configuration for a particular type of asset from the home folder."""
 
     asset_folder = os.path.join(WB.home_folder, asset_type, asset_key)
 
@@ -1228,12 +1228,94 @@ def _read_asset_config(WB, asset_type, asset_key):
     # Add the asset key
     asset_config["key"] = asset_key
 
-    _validate_asset_config(WB, asset_config)
+    _validate_asset_config(asset_config)
 
     return asset_config
 
 
-def _validate_asset_config(WB, asset_config):
+def _read_dataset_asset_config(path, asset_type):
+    """Read the configuration for a particular type of asset from a dataset."""
+
+    return _read_dataset_asset_file(path, asset_type, "config.json")
+
+
+def _write_dataset_asset_params(path, asset_type, params):
+    """Write the params for a tool or launcher to a dataset folder."""
+
+    _write_dataset_asset_file(path, asset_type, "params.json", params)
+
+
+def _read_dataset_asset_file(path, asset_type, filename):
+    """
+    Read a file associated with an asset from a dataset.
+    - asset_type: ["tools", "launchers"]
+    - filename: ["config.json", "launch.sh", "run_tool.sh", "params.json"]
+    """
+
+    # If the path is not a dataset folder
+    if not os.path.isdir(path) or _get_path_type(path) != "dataset":
+
+        # There is no asset to read
+        return
+
+    # Get the path to the file for the asset (tool or launcher)
+    file_path = _map_wb_file_path(
+        path,
+        f"{asset_type}_{filename}"
+    )
+
+    # If the file does not exist
+    if not os.path.exists(file_path):
+
+        # There is no asset to read
+        return
+
+    # Read the file
+    with open(file_path, 'r') as handle:
+
+        # If the file is JSON
+        if file_path.endswith(".json"):
+            dat = json.load(handle)
+
+        # Otherwise
+        else:
+            dat = ''.join(handle.readlines())
+
+    return dat
+    
+    
+def _write_dataset_asset_file(path, asset_type, filename, dat):
+    """
+    Write a file associated with an asset from a dataset.
+    - asset_type: ["tools", "launchers"]
+    - filename: ["config.json", "launch.sh", "run_tool.sh", "params.json"]
+    """
+
+    # If the path is not a dataset folder
+    if not os.path.isdir(path) or _get_path_type(path) != "dataset":
+
+        # There is no asset to read
+        return
+
+    # Get the path to the file for the asset (tool or launcher)
+    file_path = _map_wb_file_path(
+        path,
+        f"{asset_type}_{filename}"
+    )
+
+    # Write the file
+    with open(file_path, 'w') as handle:
+
+        # If the file is JSON
+        if file_path.endswith(".json"):
+            json.dump(dat, handle, indent=4, sort_keys=True)
+
+        # Otherwise
+        else:
+            handle.write(dat)
+
+
+def _validate_asset_config(asset_config):
     """Validate that the tool or launcher is configured correctly"""
 
     # The asset must contain a handful of elements
@@ -1241,11 +1323,11 @@ def _validate_asset_config(WB, asset_config):
         ("key", str),
         ("name", str),
         ("description", str),
-        ("args", list)
+        ("args", dict)
     ]:
 
         assert key in asset_config, f"Asset configuration must contain key '{key}'"
-        assert isinstance(asset_config[key], value_type), f"{key} must be of type {value_type}"
+        assert isinstance(asset_config[key], value_type), f"{key} must be of type {value_type}, not {type(asset_config[key])}"
 
 
 def _assert_asset_exists(WB, asset_type, tool):
@@ -1289,3 +1371,56 @@ def setup_dataset(WB, path=None, tool=None, launcher=None, overwrite=False):
     _add_dataset_attribute(path, "setup_at", WB.timestamp.encode())
     _add_dataset_attribute(path, "tool", tool)
     _add_dataset_attribute(path, "launcher", launcher)
+
+
+def set_tool_params(WB, path=None, **kwargs):
+    """Set the parameters used to run the tool in a particular dataset."""
+
+    _set_asset_params(WB, path, "tools", **kwargs)
+
+
+def set_launcher_params(WB, path=None, **kwargs):
+    """Set the parameters used to run the launcher in a particular dataset."""
+
+    _set_asset_params(WB, path, "launchers", **kwargs)
+
+
+def _set_asset_params(WB, path, asset_type, **kwargs):
+    """Set the parameters used to run a tool or launcher in a particular dataset."""
+
+    # Read the config for this asset, as defined in the dataset
+    config = _read_dataset_asset_config(path, asset_type)
+
+    # Populate a dict with the params,
+    # validated from the kwargs based on the rules in the config
+    params = dict()
+
+    # Iterate over the arguments in the configuration
+    for param_name, param_def in config["args"].items():
+
+        # If the parameter is required
+        if param_def.get("required", False):
+
+            # It must be in the kwargs
+            assert kwargs.get(param_name) is not None, f"Must provide {param_name}"
+
+        # If the parameter was not provided
+        if kwargs.get(param_name) is None:
+
+            # Skip it
+            continue
+
+        # Get the value provided
+        param_value = kwargs[param_name]
+
+        # If a list was provided
+        if isinstance(param_value, list):
+
+            # Collapse a string, using `wb_sep` if provided, ' ' if not
+            param_value = param_def.get("wb_sep", " ").join(list(map(str, param_value)))
+
+        # Add it to the params
+        params[param_name] = param_value
+
+    # Write out the params
+    _write_dataset_asset_params(path, asset_type, params)
