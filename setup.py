@@ -20,8 +20,7 @@ setup(
     license="MIT",
     entry_points={
         'console_scripts': [
-            'wb-cli=bash_workbench.cli.launch:cli',
-            'wb-tui=bash_workbench.tui.launch:tui',
+            'wb=bash_workbench.cli.launch:cli'
         ],
     },
     install_requires=requirements,
