@@ -13,14 +13,20 @@ def make_parser():
     parser.add_argument(
         "--base-folder",
         type=str,
-        default=os.path.join(os.path.expanduser("~"), "._workbench"),
+        default=os.getenv(
+            "WB_BASE",
+            default=os.path.join(os.path.expanduser("~"), "._workbench")
+        ),
         help="Base folder which contains all profile folders"
     )
 
     parser.add_argument(
         "--profile",
         type=str,
-        default="default",
+        default=os.getenv(
+            "WB_PROFILE",
+            default="default"
+        ),
         help="Profile name corresponding to a folder within the base folder. All datasets, tools, and configurations are stored here."
     )
 
