@@ -1,3 +1,4 @@
+argcomplete
 importlib_resources
 npyscreen
 pyyaml

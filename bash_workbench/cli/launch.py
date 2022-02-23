@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+# PYTHON_ARGCOMPLETE_OK
+
+import argcomplete
 import bash_workbench as wb
 import json
 import yaml
@@ -6,6 +10,9 @@ def cli():
     
     # Get the base parser for the CLI
     parser = wb.cli.args.make_parser()
+
+    # Enable autocomplete
+    argcomplete.autocomplete(parser)
 
     # Parse the arguments
     args = parser.parse_args()
