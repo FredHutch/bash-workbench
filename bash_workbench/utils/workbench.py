@@ -86,10 +86,10 @@ class Workbench:
 
         return self._run_function("index_dataset", **kwargs)
 
-    def show_datasets(self, **kwargs):
+    def list_datasets(self, **kwargs):
         "Print a list of all datasets linked from the home folder."
 
-        return self._run_function("show_datasets", **kwargs)
+        return self._run_function("list_datasets", **kwargs)
 
     def change_name(self, **kwargs):
         "Modify the name of a folder (dataset or collection)."

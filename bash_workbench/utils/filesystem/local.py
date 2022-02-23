@@ -1,4 +1,3 @@
-from distutils.command.config import config
 import json
 import os
 import shutil
@@ -40,6 +39,7 @@ def setup_root_folder(WB):
     # Provide each of the tools and launchers defined in the repository,
     # if they do not already exist
     update_base_toolkit(WB, overwrite=False)
+
 
 def index_collection(
     WB,
@@ -417,7 +417,29 @@ def _write_folder_index(path, dat, overwrite=False, indent=4):
     with open(ix_path, "w") as handle:
 
         # Encode the data as JSON
-        json.dump(dat, handle, indent=indent)
+        json.dump(dat, handle, indent=indent, sort_keys=True)
+
+
+def _add_dataset_attribute(path, key, value, indent=4):
+    """Add a key,value pair to the index information for a folder in-place."""
+
+    assert os.path.isdir(path), f"Cannot read index from non-folder {path}"
+
+    # The path to the index is canonical
+    ix_path = _map_wb_file_path(path, "index.json")
+
+    # Read the index
+    with open(ix_path, "r") as handle:
+        index = json.load(handle)
+
+    # Add the key/value
+    index[key] = value
+
+    # Write the index
+    with open(ix_path, "w") as handle:
+
+        # Encode the data as JSON
+        json.dump(index, handle, indent=indent, sort_keys=True)
 
 
 def _map_wb_file_path(folder, filename, workbench_prefix="._wb_"):
@@ -428,7 +450,7 @@ def _map_wb_file_path(folder, filename, workbench_prefix="._wb_"):
     return os.path.join(folder, workbench_prefix + filename)
 
 
-def show_datasets(
+def list_datasets(
     WB,
     show_tree=False
 ):
@@ -813,6 +835,7 @@ def delete_tag(
     # Return the updated index
     return ix
 
+
 def _find_folder_by_uuid(
     WB,
     uuid=None
@@ -985,7 +1008,7 @@ def update_base_toolkit(WB, overwrite=False):
             continue
 
         # Copy the asset from the package to the home directory
-        _copy_asset(WB, "helpers", filename, overwrite=overwrite)
+        _copy_asset_to_home(WB, "helpers", filename, overwrite=overwrite)
 
     # Copy the folders within the launchers/ and tools/ folders
     for asset_type in ["launchers", "tools"]:
@@ -1005,7 +1028,7 @@ def update_base_toolkit(WB, overwrite=False):
             for filename in os.listdir(asset_path):
 
                 # Copy the asset from the package to the home directory
-                _copy_asset(
+                _copy_asset_to_home(
                     WB,
                     f"{asset_type}/{asset_name}",
                     filename,
@@ -1013,7 +1036,7 @@ def update_base_toolkit(WB, overwrite=False):
                 )
 
 
-def _copy_asset(WB, folder, filename, overwrite=False):
+def _copy_asset_to_home(WB, folder, filename, overwrite=False):
 
     # The destination folder is in the home directory
     destination_folder = os.path.join(WB.home_folder, folder)
@@ -1049,6 +1072,109 @@ def _copy_asset(WB, folder, filename, overwrite=False):
     shutil.copyfile(source_path, destination_path, follow_symlinks=True)
 
 
+def _copy_asset_to_dataset(
+    WB,
+    dataset_path,
+    asset_type,
+    asset_key,
+    overwrite=False
+):
+
+    # The dataset path must exist
+    assert os.path.exists(dataset_path), f"Cannot copy to non-existant folder: {dataset_path}"
+
+    # Get the path to the asset directory
+    asset_path = os.path.join(
+        WB._top_level_folder(asset_type),
+        asset_key
+    )
+
+    # The asset directory must exist
+    assert os.path.exists(asset_path), f"Expected {asset_path} to exist"
+    assert os.path.isdir(asset_path), f"Expected {asset_path} to be a directory"
+
+    # Read the configuration for the asset
+    asset_config = _read_asset_config(WB, asset_type=asset_type, asset_key=asset_key)
+
+    # Assign the key to the config so that we can keep track of what this
+    # asset was named when the user invoked it
+    asset_config["key"] = asset_key
+
+    # Write it out to the dataset
+    with open(
+        _map_wb_file_path(
+            dataset_path,
+            asset_type + "_config.json"
+        ), 
+        'w'
+    ) as handle:
+        json.dump(asset_config, handle, indent=4, sort_keys=True)
+
+    # For each file in the folder
+    for fn in os.listdir(asset_path):
+
+        # If the file is the config
+        if fn == "config.json":
+            # Skip it
+            continue
+
+        # Construct the full path
+        fp = os.path.join(asset_path, fn)
+
+        # When copying to the dataset, add a prefix:
+        # ._wb_{asset_type}_
+        destination_path = _map_wb_file_path(
+            dataset_path,
+            f"{asset_type}_{fn}"
+        )
+
+        # If the file already exists
+        if os.path.exists(destination_path):
+
+            # If the overwrite flag was not set
+            if not overwrite:
+
+                # Do not take any action
+                WB.log(f"File already exists: {destination_path}")
+                continue
+
+        # Copy the file
+        WB.log(f"Copying {fp} to {destination_path}")
+        shutil.copyfile(fp, destination_path)
+
+
+def _copy_helpers_to_dataset(WB, dataset_path, overwrite=False):
+    """Copy all of the helper scripts to a dataset with the prefix ._wb_helper_"""
+
+    # Iterate over all of the files in the "helpers" folder
+    helpers_folder = WB._top_level_folder("helpers")
+    for fn in os.listdir(helpers_folder):
+
+        # Reconstruct the path
+        fp = os.path.join(helpers_folder, fn)
+
+        # When copying to the dataset, add a prefix:
+        # ._wb_helpers_
+        destination_path = _map_wb_file_path(
+            dataset_path,
+            "helpers_" + fn
+        )
+
+        # If the file already exists
+        if os.path.exists(destination_path):
+
+            # If the overwrite flag was not set
+            if not overwrite:
+
+                # Do not take any action
+                WB.log(f"File already exists: {destination_path}")
+                continue
+
+        # Copy the file
+        WB.log(f"Copying {fp} to {destination_path}")
+        shutil.copyfile(fp, destination_path)
+
+
 def list_tools(WB):
     """List the tools available for creating datasets."""
 
@@ -1075,7 +1201,7 @@ def _list_assets(WB, asset_type):
         asset_config = _read_asset_config(WB, asset_type, asset_key)
 
         # Add to the list
-        asset_list.append(asset_config)
+        asset_list.append(asset_config["key"])
 
     return asset_list
 
@@ -1099,6 +1225,9 @@ def _read_asset_config(WB, asset_type, asset_key):
     with open(config_fp, "r") as handle:
         asset_config = json.load(handle)
 
+    # Add the asset key
+    asset_config["key"] = asset_key
+
     _validate_asset_config(WB, asset_config)
 
     return asset_config
@@ -1109,6 +1238,7 @@ def _validate_asset_config(WB, asset_config):
 
     # The asset must contain a handful of elements
     for key, value_type in [
+        ("key", str),
         ("name", str),
         ("description", str),
         ("args", list)
@@ -1116,3 +1246,46 @@ def _validate_asset_config(WB, asset_config):
 
         assert key in asset_config, f"Asset configuration must contain key '{key}'"
         assert isinstance(asset_config[key], value_type), f"{key} must be of type {value_type}"
+
+
+def _assert_asset_exists(WB, asset_type, tool):
+    """Make sure that an asset with this name exists."""
+
+    available_assets = _list_assets(WB, asset_type)
+
+    msg = f"{asset_type}/{tool} not found, options: {', '.join(available_assets)}"
+    assert tool in available_assets, msg
+
+
+def setup_dataset(WB, path=None, tool=None, launcher=None, overwrite=False):
+    """Set up a dataset with a tool and a launcher."""
+
+    WB.log(f"Setting up a dataset for analysis at {path}")
+
+    # Get the type of filepath which was passed in
+    # either: file, folder, dataset, or collection
+    path_type = _get_path_type(path)
+
+    msg = f"path must indicate an indexed dataset, not a '{path_type}'"
+    assert path_type == "dataset", msg
+
+    # Make sure that the specified tool exists
+    _assert_asset_exists(WB, "tools", tool)
+    
+    # Make sure that the specified launcher exists
+    _assert_asset_exists(WB, "launchers", launcher)
+
+    # Copy the tool configuration to the dataset folder
+    _copy_asset_to_dataset(WB, path, "tools", tool, overwrite=overwrite)
+    
+    # Copy the launcher configuration to the dataset folder
+    _copy_asset_to_dataset(WB, path, "launchers", launcher, overwrite=overwrite)
+
+    # Copy all of the helpers to the dataset
+    _copy_helpers_to_dataset(WB, path, overwrite=overwrite)
+
+    # Record the time at which the scripts were set up
+    WB.log("Recording tool and launcher in dataset index")
+    _add_dataset_attribute(path, "setup_at", WB.timestamp.encode())
+    _add_dataset_attribute(path, "tool", tool)
+    _add_dataset_attribute(path, "launcher", launcher)

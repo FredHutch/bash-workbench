@@ -84,7 +84,7 @@ def make_parser():
             )
         ),
         dict(
-            key="show_datasets",
+            key="list_datasets",
             help="""
             Print the list of all datasets linked to the home directory.
             """,
@@ -251,6 +251,33 @@ def make_parser():
             Print a list of all available launchers
             """,
             kwargs=dict()
+        ),
+        dict(
+            key="setup_dataset",
+            help="""
+            Populate a dataset directory with the configuration and script for a tool and launcher
+            """,
+            kwargs=dict(
+                path=dict(
+                    type=str,
+                    default=os.getcwd(),
+                    help="Dataset folder to be populated"
+                ),
+                tool=dict(
+                    type=str,
+                    default=None,
+                    help="Name of tool used to run the analysis"
+                ),
+                launcher=dict(
+                    type=str,
+                    default="base",
+                    help="Name of launcher used to run the analysis"
+                ),
+                overwrite=dict(
+                    action="store_true",
+                    help="If specified, overwrite any local tools or launchers in the folder"
+                )
+            )
         )
     ]
 

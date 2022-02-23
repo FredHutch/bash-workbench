@@ -86,7 +86,7 @@
   (( $(diff base_folder/test/data/data_folder_2/._wb_index.json $INDEX_JSON | wc -l) == 0 ))
 }
 
-@test "show_datasets" {
+@test "list_datasets" {
 
   # Create another subfolder inside the previously-created collection
   EXT_FOLDER=ext_data/data_folder_2/data_folder_3
@@ -97,7 +97,7 @@
 
   # List all indexed folders
   # Make sure that all three folders are found
-  [ $(./wb-cli-test show_datasets --data | jq 'length') == 3 ]
+  [ $(./wb-cli-test list_datasets --data | jq 'length') == 3 ]
 
 }
 
@@ -176,4 +176,11 @@
   # List the basic set of launchers available from the package
   [ $(./wb-cli-test list_launchers | jq 'length') == 1 ]
 
+}
+
+@test "setup_dataset" {
+
+  # Set up the assets needed for analysis in a dataset folder
+  ./wb-cli-test setup_dataset --path ext_data/data_folder_1 --tool make_tar_gz --launcher base
+  
 }
