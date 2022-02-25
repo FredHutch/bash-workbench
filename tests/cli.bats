@@ -229,3 +229,22 @@
   [ -s ._wb_launcher_params.json ]
   
 }
+
+@test "run_dataset" {
+
+  # Move into the dataset that we've set up with the `make_tar_gz` launcher
+  cd ext_data/data_folder_1
+
+  # Run the dataset
+  wb run_dataset
+
+  # Wait for the process to end (since wb does not block to completion)
+  sleep 2
+
+  # Make sure that a file was created as expected
+  [ -s TEST_ARCHIVE.tar.gz ]
+
+  # Make sure that the status of the dataset is "COMPLETED"
+  [[ "$(cat ._wb_index.json | jq '.status')" == *"COMPLETED"* ]]
+
+}

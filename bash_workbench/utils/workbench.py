@@ -880,3 +880,11 @@ class Workbench:
         self.log(f"Writing out environment variables for {asset_type}")
         ds.write_asset_env(asset_type, env, overwrite=overwrite)
 
+    def run_dataset(self, path=None):
+        """Launch the tool which has been configured in a dataset."""
+
+        # Instantiate the dataset object
+        ds = Dataset(path)
+
+        # Run the dataset
+        ds.run()

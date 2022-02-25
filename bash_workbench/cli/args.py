@@ -293,6 +293,19 @@ def make_parser():
                 ),
                 **asset_configs["launcher"]
             }
+        ),
+        dict(
+            key="run_dataset",
+            help="""
+            Launch the launcher + tool which have been configured in a dataset
+            """,
+            kwargs={
+                "path": dict(
+                    type=str,
+                    default=os.getcwd(),
+                    help="Dataset folder to be run"
+                )
+            }
         )
     ]
 

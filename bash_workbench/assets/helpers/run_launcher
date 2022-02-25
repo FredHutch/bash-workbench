@@ -1,7 +1,5 @@
 #!/bin/bash
-"""
-Run the launcher defined in the current working directory
-"""
+# Run the launcher defined in the current working directory
 
 set -e
 
@@ -19,14 +17,14 @@ file_exists(){
 # Set the status of the dataset, while logging this action
 set_status(){
     echo "Setting status of dataset to $1" >> $LOG_FP
-    ./._wb_helpers_set_dataset_attribute status $1
+    /bin/bash ._wb_helper_set_dataset_attribute status $1
 }
 
 # Set the status as LAUNCHING
 set_status LAUNCHING
 
 # Make sure that all of the expected files exist
-file_exists ._wb_helpers_set_dataset_attribute
+file_exists ._wb_helper_set_dataset_attribute
 file_exists ._wb_tool_run.sh
 file_exists ._wb_tool_params.json
 file_exists ._wb_tool_config.json
@@ -44,4 +42,6 @@ source ._wb_launcher_env
 set_status RUNNING
 
 # Run the launcher
-./._wb_launcher_run.sh
+/bin/bash ._wb_launcher_run.sh \
+2>> ._wb_error.txt \
+1>> ._wb_output.txt

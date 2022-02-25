@@ -1,4 +1,5 @@
 import bash_workbench as wb
+import subprocess
 import uuid
 
 class Dataset:
@@ -231,3 +232,11 @@ class Dataset:
                     children_uuids.append(ds.index["uuid"])
 
         return children_uuids
+
+    def run(self):
+        """Launch the tool which has been configured for this dataset."""
+
+        subprocess.Popen(
+            ["/bin/bash", "._wb_helper_run_launcher"],
+            start_new_session=True
+        )
