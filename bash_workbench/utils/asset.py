@@ -77,18 +77,18 @@ class Asset:
     def copy_to_dataset(self, dataset, overwrite=False):
         """Copy the files from an asset to a Dataset."""
 
-        # The path of the file in the dataset folder will have
-        # a prefix with the structure "._wb_{asset_type}_"
-        dest_prefix = f"._wb_{self.asset_type}_"
+        # All  of the files will be copied to the folder
+        # {dataset.wb_folder}/{self.asset_type}/
+        dest_folder = self.WB.filelib.path_join(dataset.wb_folder, self.asset_type)
 
-        # Small function for constructing the full path to use in the dataset folder
-        dest_path_f = lambda fn: self.WB.filelib.path_join(dataset.path, dest_prefix + fn)
+        # Create the folder if it does not exist
+        self.WB.filelib.mkdir_p(dest_folder)
 
         # For each of the files associated with this asset
         for fn in self.list_files():
 
-            # Get the path to the destination
-            dest_path = dest_path_f(fn)
+            # Get the path to the destination, inside the folder set up above
+            dest_path = self.WB.filelib.path_join(dest_folder, fn)
 
             # If a file already exists in the destination
             if self.WB.filelib.exists(dest_path):
@@ -96,9 +96,9 @@ class Asset:
                 # And the overwrite flag was not set, raise an error
                 assert overwrite, f"Cannot copy {fn} to {dest_path} - file exists"
 
-            # Get the full path to the file
+            # Get the full path to the source file
             fp = self.WB.filelib.path_join(self.path, fn)
 
             # Otherwise, copy those files to the dataset folder
-            self.log(f"Copying {fp} to {dataset.path}")
-            self.WB.filelib.copyfile(fp, dest_path_f(fn))
+            self.log(f"Copying {fp} to {dest_path}")
+            self.WB.filelib.copyfile(fp, dest_path)

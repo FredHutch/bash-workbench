@@ -3,7 +3,7 @@
 
 set -e
 
-LOG_FP=._wb_log.txt
+LOG_FP=._wb/log.txt
 
 # Helper functions
 
@@ -17,31 +17,31 @@ file_exists(){
 # Set the status of the dataset, while logging this action
 set_status(){
     echo "Setting status of dataset to $1" >> $LOG_FP
-    /bin/bash ._wb_helper_set_dataset_attribute status $1
+    /bin/bash ._wb/helpers/set_dataset_attribute status $1
 }
 
 # Set the status as LAUNCHING
 set_status LAUNCHING
 
 # Make sure that all of the expected files exist
-file_exists ._wb_helper_set_dataset_attribute
-file_exists ._wb_tool_run.sh
-file_exists ._wb_tool_params.json
-file_exists ._wb_tool_config.json
-file_exists ._wb_tool_env
-file_exists ._wb_launcher_run.sh
-file_exists ._wb_launcher_params.json
-file_exists ._wb_launcher_config.json
-file_exists ._wb_launcher_env
+file_exists ._wb/helpers/set_dataset_attribute
+file_exists ._wb/tool/run.sh
+file_exists ._wb/tool/params.json
+file_exists ._wb/tool/config.json
+file_exists ._wb/tool/env
+file_exists ._wb/launcher/run.sh
+file_exists ._wb/launcher/params.json
+file_exists ._wb/launcher/config.json
+file_exists ._wb/launcher/env
 
 # Set all of the environment variables defined by the
 # parameters for the launcher
-source ._wb_launcher_env
+source ._wb/launcher/env
 
 # Set the status as RUNNING
 set_status RUNNING
 
 # Run the launcher
-/bin/bash ._wb_launcher_run.sh \
-2>> ._wb_error.txt \
-1>> ._wb_output.txt
+/bin/bash ._wb/launcher/run.sh \
+2>> ._wb/error.txt \
+1>> ._wb/output.txt

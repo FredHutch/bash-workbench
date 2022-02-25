@@ -2,13 +2,13 @@
 # Set an attribute on a dataset in the current working directory.
 # The only dependency for this script is the jq utility.
 # Attributes are set for datasets by updating a field in the
-# JSON object found in ._wb_index.json
+# JSON object found in ._wb/index.json
 
 set -e
 
-echo "Setting attribute $1 to $2" >> ._wb_log.txt
+echo "Setting attribute $1 to $2" >> ._wb/log.txt
 
-cat ._wb_index.json \
+cat ._wb/index.json \
 | jq --arg key $1 --arg val $2 '. + {($key): $val}' \
-> ._wb_index.json.updated \
-&& mv ._wb_index.json.updated ._wb_index.json
+> ._wb/index.json.updated \
+&& mv ._wb/index.json.updated ._wb/index.json

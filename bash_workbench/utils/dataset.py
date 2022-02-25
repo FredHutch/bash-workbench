@@ -5,7 +5,7 @@ import uuid
 class Dataset:
     """Object used to access and manipulate 'dataset' and 'collection' folders."""
 
-    def __init__(self, path:str=None, filesystem="local"):
+    def __init__(self, path:str=None, filesystem="local", wb_folder="._wb"):
 
         # Attach the module used for this filesystem
         self.filelib = wb.utils.filesystem.__dict__.get(filesystem)
@@ -16,28 +16,73 @@ class Dataset:
         # The path must point to a directory
         assert self.filelib.isdir(self.path), f"Dataset must be a directory, not {self.path}"
 
-        # Keep track of the filesystem being used
-        self.filesystem = filesystem
+        # Keep track of the subfolder used to store workbench items
+        self.wb_folder = self.filelib.path_join(path, wb_folder)
 
         # Make a timestamp object
         self.timestamp = wb.utils.timestamp.Timestamp()
 
-        # Attach the module used for this filesystem
-        self.filelib = wb.utils.filesystem.__dict__.get(self.filesystem)
-
         # If there are files present in this folder which define the
         # properties of the dataset index, tool, or launcher,
         # read those files in and attach the data to the object
-        self.read_configuration_files()
+        self.read_index()
 
-    def read_configuration_files(self):
-        """Read in files associated with the dataset index, tool, and launcher."""
+        # If this is a dataset
+        if self.is_dataset():
+
+            # Read in configurations of the tool and launcher
+            self.read_asset_configs()
+
+    def setup_wb_folder(self):
+        """Set up the wb_folder"""
+
+        # Create the folder if it does not exist
+        self.filelib.mkdir_p(self.wb_folder)
+
+    def setup_asset_folders(self):
+        """Set up folders for the tool and launcher, if they do not exist."""
+
+        for subfolder in ["tool", "launcher"]:
+            self.filelib.mkdir_p(self.filepath(subfolder))
+
+    def read_index(self):
+        """Read in the dataset index."""
+
+        # By default, the index and type are both None
+        self.index = None
+        self.type = None
+
+        # If the wb_folder does not exist
+        if not self.filelib.exists(self.wb_folder):
+
+            # Then there cannot be any index within it
+            # so we should stop now
+            return
 
         # Read in the file (adding the prefix ._wb_), or assign
         # a null value if the file does not exist
         self.index = self.read_json("index.json")
-        self.tool = self.read_json("tool_config.json")
-        self.launcher = self.read_json("launcher_config.json")
+
+        # If an index has been created
+        if self.index is not None:
+
+            # Set the type of the dataset from the `type` field
+            self.type = self.index["type"]
+            msg = f"Folder type can be dataset or collection, not {self.type}"
+            assert self.type in ["dataset", "collection"], msg
+
+        else:
+            self.type = None
+
+    def read_asset_configs(self):
+        """Read in files describing the dataset's tool and launcher."""
+
+        self.tool = self.read_json("tool/config.json")
+        self.launcher = self.read_json("launcher/config.json")
+
+    def is_dataset(self):
+        """Return True if the folder is indexed as a dataset."""
+        return isinstance(self.type, str) and self.type == "dataset"
 
     def read_json(self, fn):
         """
@@ -88,9 +133,10 @@ class Dataset:
 
         self.filelib.write_text(dat, fp, **kwargs)
 
-    def filepath(self, filename, prefix="._wb_"):
-        """Return the path to a file in the folder, adding a dedicated prefix."""
-        return self.filelib.path_join(self.path, prefix + filename)
+    def filepath(self, filename):
+        """Return the path to a file in the wb_folder."""
+
+        return self.filelib.path_join(self.wb_folder, filename)
 
     def create_index(self, ix_type:str=None):
         """Add an index to a folder, can be either 'dataset' or 'collection'."""
@@ -101,6 +147,9 @@ class Dataset:
         # ix_type can only be 'dataset' or 'collection'
         msg = "ix_type can only be 'dataset' or 'collection'"
         assert ix_type in ["dataset", "collection"]
+
+        # Set the type of this object
+        self.type = ix_type
 
         # Get the parent of this directory
         parent_dir = self.filelib.dirname(self.path)
@@ -113,6 +162,9 @@ class Dataset:
         msg = f"Cannot index a folder inside an existing dataset ({parent_dir})"
         assert parent_dataset.index is None or parent_dataset.index["type"] == "collection", msg
 
+        # Set up the wb_folder for the index file to be placed within
+        self.setup_wb_folder()
+    
         # Create the index object, consisting of
         #  - the folder type (collection or dataset)
         #  - timestamp
@@ -127,6 +179,12 @@ class Dataset:
 
         # Write it to the file
         self.write_index()
+
+        # If the folder is a dataset
+        if self.is_dataset():
+
+            # Create folders for the tool and launcher
+            self.setup_asset_folders()
 
     def write_index(self, indent=4, sort_keys=True, overwrite=False):
         """Write the dataset index to the filesystem."""
@@ -145,7 +203,7 @@ class Dataset:
 
         # Write the params object to the appropriate path for the asset type
         self.write_json(
-            f"{asset_type}_params.json",
+            self.filelib.path_join(asset_type, "params.json"),
             params,
             indent=indent,
             sort_keys=sort_keys,
@@ -162,7 +220,7 @@ class Dataset:
 
         # Write the params object to the appropriate path for the asset type
         self.write_text(
-            f"{asset_type}_env",
+            self.filelib.path_join(asset_type, "env"),
             env_script,
             overwrite=overwrite
         )
@@ -237,6 +295,7 @@ class Dataset:
         """Launch the tool which has been configured for this dataset."""
 
         subprocess.Popen(
-            ["/bin/bash", "._wb_helper_run_launcher"],
-            start_new_session=True
+            ["/bin/bash", self.filepath("helpers/run_launcher")],
+            start_new_session=True,
+            cwd=self.path
         )

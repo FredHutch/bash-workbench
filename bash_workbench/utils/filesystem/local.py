@@ -23,6 +23,13 @@ def makedirs(path):
     """Make a folder and all of its parents on the local filesystem."""
     os.makedirs(path)
 
+def mkdir_p(path):
+    """Make a folder if it does not already exist, assert that it is a directory."""
+
+    if not os.path.exists(path):
+        os.makedirs(path)
+    assert os.path.isdir(path), f"Must be a folder, not a file: {path}"
+
 def listdir(path):
     """List the contents of a directory."""
     return os.listdir(path)

@@ -648,17 +648,8 @@ class Workbench:
         destination_folder = self._top_level_folder(folder)
         destination_path = self._top_level_file(folder, filename)
 
-        # If the folder does not exist
-        if not self.filelib.exists(destination_folder):
-
-            # Create it
-            self.filelib.makedirs(destination_folder)
-
-        # If the path to the folder does exist
-        else:
-
-            # Make sure the path does point to a folder
-            assert self.filelib.isdir(destination_folder), f"Expected to find a folder: {destination_folder}"
+        # Create the destination folder if it does not exist
+        self.filelib.mkdir_p(destination_folder)
 
         # If the file already exists
         if self.filelib.exists(destination_path):
@@ -746,10 +737,17 @@ class Workbench:
         return self._list_assets("tool")
 
     def _copy_helpers_to_dataset(self, dataset_path, overwrite=False):
-        """Copy all of the helper scripts to a dataset with the prefix ._wb_helper_"""
+        """Copy all of the helper scripts to a dataset inside the subfolder ._wb"""
 
-        # Function to build the path for a file in the dataset folder
-        dest_path_f = lambda fn: self.filelib.path_join(dataset_path, f"._wb_helper_{fn}")
+        # Instantiate a Dataset object
+        dataset = Dataset(dataset_path)
+
+        # All of the files will be copied to the folder
+        # {dataset.wb_folder}/helpers/
+        dest_folder = self.filelib.path_join(dataset.wb_folder, "helpers")
+
+        # Create the folder if it does not exist
+        self.filelib.mkdir_p(dest_folder)
 
         # Iterate over all of the files in the "helpers" folder
         helpers_folder = self._top_level_folder("helpers")
@@ -759,7 +757,7 @@ class Workbench:
             source_fp = self.filelib.path_join(helpers_folder, fn)
 
             # Make the path for the destination
-            dest_fp = dest_path_f(fn)
+            dest_fp = self.filelib.path_join(dest_folder, fn)
 
             # If the file already exists
             if self.filelib.exists(dest_fp):

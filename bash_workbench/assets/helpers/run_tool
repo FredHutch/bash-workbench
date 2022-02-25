@@ -4,9 +4,9 @@ set -e
 
 
 # The script used to execute the tool will be named with the
-# ._wb_ prefix to avoid collision with any other files
+# ._wb prefix to avoid collision with any other files
 
-LOG_FP=._wb_log.txt
+LOG_FP=._wb/log.txt
 
 # Make sure that the expected file exists
 file_exists(){
@@ -18,21 +18,21 @@ file_exists(){
 # Set the status of the dataset, while logging this action
 set_status(){
     echo "Setting status of dataset to $1" >> $LOG_FP
-    /bin/bash ._wb_helper_set_dataset_attribute status $1
+    /bin/bash ._wb/helpers/set_dataset_attribute status $1
 }
 
 # Set all of the environment variables defined by the
 # parameters for the launcher
-file_exists ._wb_tool_run.sh
-file_exists ._wb_tool_env
-source ._wb_tool_env
+file_exists ._wb/tool/run.sh
+file_exists ._wb/tool/env
+source ._wb/tool/env
 
 # Run the tool with the `run.sh` script defined by the
 # tool developer. While running this command, route any
 # messages to standard out or standard error to canonical
 # filepaths
-( /bin/bash ._wb_tool_run.sh \
-2>> ._wb_error.txt \
-1>> ._wb_output.txt && \
+( /bin/bash ._wb/tool/run.sh \
+2>> ._wb/error.txt \
+1>> ._wb/output.txt && \
 set_status COMPLETED ) || \
 set_status FAILED

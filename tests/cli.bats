@@ -36,7 +36,7 @@
   wb index_dataset --path ${EXT_FOLDER}
 
   # Construct the path which is expected to contain the index
-  INDEX_JSON=${EXT_FOLDER}/._wb_index.json
+  INDEX_JSON=${EXT_FOLDER}/._wb/index.json
 
   # Validate that the index file was created
   [ -s $INDEX_JSON ]
@@ -52,7 +52,7 @@
 
   # Validate that a link was created for that folder in the home directory
   echo "Checking for valid symlink"
-  (( $(diff base_folder/test/data/data_folder_1/._wb_index.json ${INDEX_JSON} | wc -l) == 0 ))
+  (( $(diff base_folder/test/data/data_folder_1/._wb/index.json ${INDEX_JSON} | wc -l) == 0 ))
 }
 
 @test "index_collection" {
@@ -65,7 +65,7 @@
   wb index_collection --path ${EXT_FOLDER}
 
   # Construct the path which is expected to contain the index
-  INDEX_JSON=${EXT_FOLDER}/._wb_index.json
+  INDEX_JSON=${EXT_FOLDER}/._wb/index.json
 
   # Validate that the index file was created
   [ -s $INDEX_JSON ]
@@ -81,7 +81,7 @@
 
   # Validate that a link was created for that folder in the home directory
   echo "Checking for valid symlink"
-  (( $(diff base_folder/test/data/data_folder_2/._wb_index.json $INDEX_JSON | wc -l) == 0 ))
+  (( $(diff base_folder/test/data/data_folder_2/._wb/index.json $INDEX_JSON | wc -l) == 0 ))
 }
 
 @test "list_datasets" {
@@ -200,13 +200,13 @@
   wb set_tool_params --archive TEST_ARCHIVE --target ../unindexed_data_folder_A
 
   # A params file should have been created
-  [ -s ._wb_tool_params.json ]
+  [ -s ._wb/tool/params.json ]
 
   # An environment file should have been created
-  [ -s ._wb_tool_env ]
+  [ -s ._wb/tool/env ]
 
   # Source the environment variables from that file
-  source ._wb_tool_env
+  source ._wb/tool/env
 
   # The environment variables in the working environment should
   # reflect the values set up previously
@@ -226,7 +226,7 @@
   wb set_launcher_params
 
   # A params file should have been created
-  [ -s ._wb_launcher_params.json ]
+  [ -s ._wb/launcher/params.json ]
   
 }
 
@@ -241,10 +241,12 @@
   # Wait for the process to end (since wb does not block to completion)
   sleep 2
 
+  ls -lahtr
+
   # Make sure that a file was created as expected
   [ -s TEST_ARCHIVE.tar.gz ]
 
   # Make sure that the status of the dataset is "COMPLETED"
-  [[ "$(cat ._wb_index.json | jq '.status')" == *"COMPLETED"* ]]
+  [[ "$(cat ._wb/index.json | jq '.status')" == *"COMPLETED"* ]]
 
 }
