@@ -6,9 +6,11 @@ def make_parser():
     """Return a base parser used to format command line arguments for the Workbench CLI."""
 
     # Before setting up the parser, read any asset configurations from the current working directory
+    ds = wb.utils.dataset.Dataset(os.getcwd())
+
     asset_configs = {
-        asset_type: wb.utils.filesystem.local._read_dataset_asset_config(os.getcwd(), asset_type)
-        for asset_type in ["tools", "launchers"]
+        asset_type: ds.__dict__.get(asset_type)
+        for asset_type in ["tool", "launcher"]
     }
     asset_configs = {
         k: v["args"] if v is not None and v.get("args") is not None else {}
@@ -104,13 +106,7 @@ def make_parser():
             help="""
             Print the list of all datasets linked to the home directory.
             """,
-            kwargs=dict(
-                data=dict(
-                    action="store_false",
-                    dest="show_tree",
-                    help="If specified, print the raw data (default is a tree representation of the datasets)"
-                )
-            )
+            kwargs=dict()
         ),
         dict(
             key="find_datasets",
@@ -135,11 +131,6 @@ def make_parser():
                     default=None,
                     nargs="+",
                     help="Only show datasets with this tag (specify one or more as 'KEY1=VALUE1 KEY2=VALUE2')"
-                ),
-                data=dict(
-                    action="store_false",
-                    dest="show_tree",
-                    help="If specified, print the raw data (default is a tree representation of the datasets)"
                 )
             )
         ),
@@ -149,11 +140,6 @@ def make_parser():
             Change the name of a dataset
             """,
             kwargs=dict(
-                uuid=dict(
-                    type=str,
-                    default=None,
-                    help="Specify the dataset to modify by its uuid"
-                ),
                 path=dict(
                     type=str,
                     default=None,
@@ -173,11 +159,6 @@ def make_parser():
             Change the description of a dataset
             """,
             kwargs=dict(
-                uuid=dict(
-                    type=str,
-                    default=None,
-                    help="Specify the dataset to modify by its uuid"
-                ),
                 path=dict(
                     type=str,
                     default=None,
@@ -197,11 +178,6 @@ def make_parser():
             Change the value of a tag for a dataset
             """,
             kwargs=dict(
-                uuid=dict(
-                    type=str,
-                    default=None,
-                    help="Specify the dataset to modify by its uuid"
-                ),
                 path=dict(
                     type=str,
                     default=None,
@@ -225,11 +201,6 @@ def make_parser():
             Remove a tag from a dataset if it is present
             """,
             kwargs=dict(
-                uuid=dict(
-                    type=str,
-                    default=None,
-                    help="Specify the dataset to modify by its uuid"
-                ),
                 path=dict(
                     type=str,
                     default=None,
@@ -306,7 +277,7 @@ def make_parser():
                     default=os.getcwd(),
                     help="Dataset folder to be configured"
                 ),
-                **asset_configs["tools"]
+                **asset_configs["tool"]
             }
         ),
         dict(
@@ -320,7 +291,7 @@ def make_parser():
                     default=os.getcwd(),
                     help="Dataset folder to be configured"
                 ),
-                **asset_configs["launchers"]
+                **asset_configs["launcher"]
             }
         )
     ]

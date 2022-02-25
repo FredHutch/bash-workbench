@@ -62,9 +62,8 @@ def cli():
             yaml = lambda r: print(yaml.dump(r))
         )
 
-        # Make sure that --print_format is defined as one of the keys above
-        msg = f"--print_format must be one of '{', '.join(list(print_funcs.keys()))}', not '{args.print_format}'"
-        assert args.print_format in print_funcs, msg
-
-        # Invoke the function
-        print_funcs[args.print_format](r)
+        # Invoke the function, falling back to print() for other types
+        print_funcs.get(
+            args.print_format,
+            lambda r: print(r)
+        )(r)
