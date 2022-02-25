@@ -202,6 +202,16 @@
   # A params file should have been created
   [ -s ._wb_tool_params.json ]
 
+  # An environment file should have been created
+  [ -s ._wb_tool_env ]
+
+  # Source the environment variables from that file
+  source ._wb_tool_env
+
+  # The environment variables in the working environment should
+  # reflect the values set up previously
+  [ "${ARCHIVE}" == "TEST_ARCHIVE" ]
+
 }
 
 @test "set_launcher_params" {

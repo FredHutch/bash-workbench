@@ -73,6 +73,20 @@ class Dataset:
 
         self.filelib.write_json(dat, fp, **kwargs)
 
+    def write_text(self, fn, dat, overwrite=False, **kwargs):
+        """Write out a text file with the prefix ._wb_ in the dataset folder."""
+
+        # Set up the path to be written
+        fp = self.filepath(fn)
+
+        # If the file exists
+        if self.filelib.exists(fp):
+
+            # Raise an error if overwrite is not True
+            assert overwrite, f"File exists but overwrite was not set ({fp})"
+
+        self.filelib.write_text(dat, fp, **kwargs)
+
     def filepath(self, filename, prefix="._wb_"):
         """Return the path to a file in the folder, adding a dedicated prefix."""
         return self.filelib.path_join(self.path, prefix + filename)
@@ -134,6 +148,21 @@ class Dataset:
             params,
             indent=indent,
             sort_keys=sort_keys,
+            overwrite=overwrite
+        )
+
+    def write_asset_env(self, asset_type, env, overwrite=False):
+        """Write out the parameters for an asset in JSON format."""
+
+        # Format a script which will be used to set environment variables in BASH
+        env_script = "\n\n".join(["#!/bin/bash", "set -e", "####"])
+        for env_name, env_val in env.items():
+            env_script += "\n" + f"export {env_name}='{env_val}'"
+
+        # Write the params object to the appropriate path for the asset type
+        self.write_text(
+            f"{asset_type}_env",
+            env_script,
             overwrite=overwrite
         )
 

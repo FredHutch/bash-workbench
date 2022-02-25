@@ -1,0 +1,47 @@
+#!/bin/bash
+"""
+Run the launcher defined in the current working directory
+"""
+
+set -e
+
+LOG_FP=._wb_log.txt
+
+# Helper functions
+
+# Make sure that the expected file exists
+file_exists(){
+    echo "Checking for file $1" >> $LOG_FP && \
+    ( [ -e "${1}" ] || echo "File does not exist: $1" ) && \
+    [ -e "${1}" ]
+}
+
+# Set the status of the dataset, while logging this action
+set_status(){
+    echo "Setting status of dataset to $1" >> $LOG_FP
+    ./._wb_helpers_set_dataset_attribute status $1
+}
+
+# Set the status as LAUNCHING
+set_status LAUNCHING
+
+# Make sure that all of the expected files exist
+file_exists ._wb_helpers_set_dataset_attribute
+file_exists ._wb_tool_run.sh
+file_exists ._wb_tool_params.json
+file_exists ._wb_tool_config.json
+file_exists ._wb_tool_env
+file_exists ._wb_launcher_run.sh
+file_exists ._wb_launcher_params.json
+file_exists ._wb_launcher_config.json
+file_exists ._wb_launcher_env
+
+# Set all of the environment variables defined by the
+# parameters for the launcher
+source ._wb_launcher_env
+
+# Set the status as RUNNING
+set_status RUNNING
+
+# Run the launcher
+./._wb_launcher_run.sh

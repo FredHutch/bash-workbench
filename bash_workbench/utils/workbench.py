@@ -799,17 +799,17 @@ class Workbench:
         ds.set_attribute("tool", tool.name)
         ds.set_attribute("launcher", launcher.name)
 
-    def set_tool_params(self, path=None, **kwargs):
+    def set_tool_params(self, path=None, overwrite=False, **kwargs):
         """Set the parameters used to run the tool in a particular dataset."""
 
-        self._set_asset_params(path, "tool", **kwargs)
+        self._set_asset_params(path, "tool", overwrite=overwrite, **kwargs)
 
-    def set_launcher_params(self, path=None, **kwargs):
+    def set_launcher_params(self, path=None, overwrite=False, **kwargs):
         """Set the parameters used to run the launcher in a particular dataset."""
 
-        self._set_asset_params(path, "launcher", **kwargs)
+        self._set_asset_params(path, "launcher", overwrite=overwrite, **kwargs)
 
-    def _set_asset_params(self, path, asset_type, **kwargs):
+    def _set_asset_params(self, path, asset_type, overwrite=False, **kwargs):
         """Set the parameters used to run a tool or launcher in a particular dataset."""
 
         # Instantiate the dataset object
@@ -835,6 +835,9 @@ class Workbench:
         # Populate a dict with the params,
         # validated from the kwargs based on the rules in the config
         params = dict()
+
+        # Populate a dict with the environment variables that will be set
+        env = dict()
 
         # Iterate over the arguments in the configuration
         for param_name, param_def in asset_config["args"].items():
@@ -863,6 +866,17 @@ class Workbench:
             # Add it to the params
             params[param_name] = param_value
 
+            # If an environment variable was set
+            if param_def.get("wb_env") is not None:
+
+                # Add the parameter name and value to the dict
+                env[param_def.get("wb_env")] = param_value
+
         # Write out the params
         self.log(f"Writing out parameters for {asset_type}")
-        ds.write_asset_params(asset_type, params)
+        ds.write_asset_params(asset_type, params, overwrite=overwrite)
+
+        # Write out a file which can be used to source the environment variables
+        self.log(f"Writing out environment variables for {asset_type}")
+        ds.write_asset_env(asset_type, env, overwrite=overwrite)
+
