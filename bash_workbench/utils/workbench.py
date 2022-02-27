@@ -1,6 +1,7 @@
 import bash_workbench as wb
 from  bash_workbench.utils.asset import Asset
 from  bash_workbench.utils.dataset import Dataset
+from  bash_workbench.utils.repository import Repository
 from importlib_resources import files
 
 class Workbench:
@@ -84,7 +85,7 @@ class Workbench:
             self.log(f"Exists {self.home_folder}")
 
         # For each of a series of subfolders
-        for subfolder in ["data", "launcher", "tool", "helper"]:
+        for subfolder in ["data", "launcher", "tool", "helper", "repositories"]:
 
             # Construct the path for this subfolder inside the root folder
             fp = self._top_level_folder(subfolder)
@@ -886,3 +887,103 @@ class Workbench:
 
         # Run the dataset
         ds.run()
+
+    def repository(self, name):
+        """Instantiate a Repository object."""
+
+        return Repository(
+            name=name,
+            home_folder=self.home_folder,
+            filelib=self.filelib,
+            logger=self.logger
+        )
+
+    def add_repo(self, name=None):
+        """Clone/download a repository from GitHub if it does not already exist."""
+
+        # Instantiate a Repository object
+        self.log(f"Adding repository {name}")
+        repo = self.repository(name)
+
+        # If the repository does not already exist
+        if not repo.exists():
+
+            # Clone it
+            self.log("Cloning repository")
+            repo.clone()
+
+        else:
+            self.log("Repository already exists")
+
+    def list_repos(self):
+        """Return a list of the GitHub repositories which are available locally."""
+
+        # Make a list of repositories
+        repo_list = list()
+
+        # Point to the base folder in which all repositories are saved
+        repo_home = self._top_level_folder("repositories")
+
+        # Iterate over each of the folders in "repositories/"
+        for org_folder in self.filelib.listdir(repo_home):
+
+            # Iterate over any subfolders
+            for repo_folder in self.filelib.listdir(
+                self.filelib.path_join(
+                    repo_home,
+                    org_folder
+                )
+            ):
+
+                # The name of the repository should match the folders
+                repo_name = f"{org_folder}/{repo_folder}"
+
+                # Try to instantiate a repository object
+                repo = self.repository(repo_name)
+
+                # If the repository has been cloned
+                if repo.exists():
+
+                    # Add it to the list
+                    repo_list.append(repo_name)
+
+        return repo_list
+
+    def update_repo(self, name=None):
+        """Update a repository to the latest version."""
+
+        # Instantiate a Repository object
+        self.log(f"Setting up local repository for {name}")
+        repo = self.repository(name)
+
+        # If the repository does not already exist
+        if not repo.exists():
+
+            self.log(f"Cannot update {name}, repository has not yet been added")
+
+        else:
+
+            self.log("Updating repository {name}")
+            repo.pull()
+
+    def switch_branch(self, name=None, branch=None, force=True):
+        """Switch to a different branch."""
+
+        # Instantiate a Repository object
+        self.log(f"Setting up local repository for {name}")
+        repo = self.repository(name)
+
+        # Switch to the branch
+        self.log(f"Switching to branch {branch}")
+        repo.switch_branch(branch, force=force)
+
+    def delete_repo(self, name=None):
+        """Delete the local copy of a repository, if it exists."""
+
+        # Instantiate a Repository object
+        self.log(f"Setting up local repository for {name}")
+        repo = self.repository(name)
+
+        # Delete the repository
+        self.log(f"Deleting repository {name}")
+        repo.delete()

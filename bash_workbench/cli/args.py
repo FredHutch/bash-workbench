@@ -306,6 +306,52 @@ def make_parser():
                     help="Dataset folder to be run"
                 )
             }
+        ),
+        dict(
+            key="add_repo",
+            help="""
+            Download a GitHub repository for local execution, if it does not already exist
+            """,
+            kwargs={
+                "name": dict(
+                    type=str,
+                    required=True,
+                    help="Name of repository to add (e.g. FredHutch/bash-workbench-tools)"
+                )
+            }
+        ),
+        dict(
+            key="list_repos",
+            help="""
+            Print a list of the GitHub repositories which are available locally
+            """,
+            kwargs={}
+        ),
+        dict(
+            key="update_repo",
+            help="""
+            Update a repository to the latest version
+            """,
+            kwargs={
+                "name": dict(
+                    type=str,
+                    required=True,
+                    help="Name of repository to update (e.g. FredHutch/bash-workbench-tools)"
+                )
+            }
+        ),
+        dict(
+            key="delete_repo",
+            help="""
+            Delete the local copy of a repository, if it exists
+            """,
+            kwargs={
+                "name": dict(
+                    type=str,
+                    required=True,
+                    help="Name of repository to update (e.g. FredHutch/bash-workbench-tools)"
+                )
+            }
         )
     ]
 

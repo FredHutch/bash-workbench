@@ -22,6 +22,7 @@
   [ -d base_folder/test/launcher ]
   [ -d base_folder/test/data ]
   [ -d base_folder/test/tool ]
+  [ -d base_folder/test/repositories ]
 }
 
 @test "index_dataset" {
@@ -248,5 +249,37 @@
 
   # Make sure that the status of the dataset is "COMPLETED"
   [[ "$(cat ._wb/index.json | jq '.status')" == *"COMPLETED"* ]]
+
+}
+
+@test "add_repository" {
+
+  wb add_repo --name FredHutch/bash-workbench-tools
+
+  [ -d base_folder/test/repositories/FredHutch/bash-workbench-tools ]
+
+}
+
+@test "list_repositories" {
+
+  REPO_LIST="$(wb list_repos)"
+  echo ${REPO_LIST}
+
+  [[ $(echo ${REPO_LIST} | jq 'length') == 1 ]]
+  [[ $(echo ${REPO_LIST} | jq '.[0]') == *"FredHutch/bash-workbench-tools"* ]]
+
+}
+
+@test "update_repository" {
+
+  wb update_repo --name FredHutch/bash-workbench-tools
+
+}
+
+@test "delete_repository" {
+
+  wb delete_repo --name FredHutch/bash-workbench-tools
+
+  [ ! -d base_folder/test/repositories/FredHutch/bash-workbench-tools ]
 
 }

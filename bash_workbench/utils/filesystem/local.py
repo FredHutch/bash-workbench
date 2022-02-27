@@ -30,6 +30,11 @@ def mkdir_p(path):
         os.makedirs(path)
     assert os.path.isdir(path), f"Must be a folder, not a file: {path}"
 
+def rmdir(path):
+    """Delete a path (file or folder) and its contents, if any exist."""
+    if os.path.exists(path):
+        shutil.rmtree(path)
+
 def listdir(path):
     """List the contents of a directory."""
     return os.listdir(path)
