@@ -210,6 +210,32 @@
   
 }
 
+@test "save_params" {
+
+  # Move into the dataset that we've set up with the `make_tar_gz` tool
+  cd ext_data/data_folder_1
+
+  # Make sure that we can parse the arguments from this tool
+  wb list_tool_params --help
+  wb list_launcher_params --help
+
+  # Save the params used for the tool and launcher
+  wb save_tool_params --name best_tool_params
+  wb save_launcher_params --name best_launcher_params
+
+  TOOL_PARAM_LIST="$(wb list_tool_params --name make_tar_gz)"
+  echo ${TOOL_PARAM_LIST}
+  LAUNCHER_PARAM_LIST="$(wb list_launcher_params --name base)"
+  echo ${LAUNCHER_PARAM_LIST}
+
+  # Make sure that the params have been saved
+  [ "$( echo ${TOOL_PARAM_LIST} | jq 'length' )" == 1 ]
+  [ "$( echo ${TOOL_PARAM_LIST} | jq '.[0]' )" == '"best_tool_params"' ]
+  [ "$( echo ${LAUNCHER_PARAM_LIST} | jq 'length' )" == 1 ]
+  [ "$( echo ${LAUNCHER_PARAM_LIST} | jq '.[0]' )" == '"best_launcher_params"' ]
+
+}
+
 @test "run_dataset" {
 
   # Move into the dataset that we've set up with the `make_tar_gz` launcher

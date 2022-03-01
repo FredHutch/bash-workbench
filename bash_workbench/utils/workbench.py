@@ -875,6 +875,123 @@ class Workbench:
         self.log(f"Writing out environment variables for {asset_type}")
         ds.write_asset_env(asset_type, env, overwrite=overwrite)
 
+    def save_tool_params(self, path=None, name=None, overwrite=False):
+        """Save the parameters used to run the tool in a particular dataset."""
+
+        self._save_asset_params(path, "tool", name, overwrite=overwrite)
+
+    def save_launcher_params(self, path=None, name=None, overwrite=False):
+        """Save the parameters used to run the launcher in a particular dataset."""
+
+        self._save_asset_params(path, "launcher", name, overwrite=overwrite)
+
+    def _save_asset_params(self, path, asset_type, name, overwrite=False):
+        """Save the parameters used to run a tool or launcher in a particular dataset."""
+
+        # Instantiate the dataset object
+        ds = Dataset(path)
+
+        # The folder must be set up as an indexed folder
+        msg = f"Folder is not an indexed folder: {path}"
+        assert ds.index is not None, msg
+
+        # A tool/launcher must have been set up for this dataset
+        msg = f"No {asset_type} has been set up for {path}"
+        assert ds.index.get(asset_type) is not None, msg
+        assert_name = ds.index.get(asset_type)
+
+        # The user must specify a name to associate with the saved params
+        msg = "Must specify a name to associate with the saved params"
+        assert name is not None, msg
+
+        msg = "Name cannot contain slashes or spaces"
+        assert " " not in name and "/" not in name, msg
+
+        # Read the params which have been saved for this asset
+        self.log(f"Reading parameters for {asset_type} ({path})")
+        params = ds.read_asset_params(asset_type)
+
+        # Params must have been defined for this asset
+        msg = f"No params have been set for {asset_type} in {path}"
+        assert params is not None, msg
+
+        # Construct the path to the folder which contains params for this asset
+        params_folder = self._top_level_folder(
+            self.filelib.path_join(
+                "params",
+                asset_type,       # 'tool' or 'launcher'
+                assert_name       # The name of the tool/launcher
+            )
+        )
+
+        self.log(f"Saving params to {params_folder}")
+
+        # If the folder does not exist
+        if not self.filelib.exists(params_folder):
+
+            # Create it
+            self.log(f"Creating folder {params_folder}")
+            self.filelib.makedirs(params_folder)
+
+        # Set up the path to use for saving the params
+        params_fp = self.filelib.path_join(
+            params_folder,
+            f"{name}.json"        # Name of the params
+        )
+
+        # If the file already exists
+        if self.filelib.exists(params_fp):
+
+            # The overwrite flag must have been set
+            assert overwrite, msg
+            msg = f"Params have already been saved for {asset_type}/{assert_name}/{name}"
+
+        # Write out the params in JSON format
+        self.log(f"Saving params to {params_fp}")
+        self.filelib.write_json(params, params_fp, indent=4, sort_keys=True)
+
+    def list_tool_params(self, name=None):
+        """List the parameters available to run the tool."""
+
+        return self._list_asset_params("tool", name)
+
+    def list_launcher_params(self, name=None):
+        """List the parameters available to run the launcher."""
+
+        return self._list_asset_params("launcher", name)
+
+    def _list_asset_params(self, asset_type, name):
+        """List the parameters available to run a tool or launcher."""
+
+        # All params files are serialized in JSON format
+        suffix = ".json"
+
+        # Construct the path to the folder which contains params for this asset
+        params_folder = self._top_level_folder(
+            self.filelib.path_join(
+                "params",
+                asset_type, # 'tool' or 'launcher'
+                name        # The name of the tool/launcher
+            )
+        )
+
+        self.log(f"Listing params from {params_folder}")
+
+        # If the folder does not exist
+        if not self.filelib.exists(params_folder):
+
+            # Return an empty list
+            return []
+
+        # If the folder does indeed exist
+
+        # Return a list of all of the files which end in .json
+        return [
+            fp[:-len(suffix)]
+            for fp in self.filelib.listdir(params_folder)
+            if fp.endswith(suffix)
+        ]
+
     def run_dataset(self, path=None):
         """Launch the tool which has been configured in a dataset."""
 

@@ -173,6 +173,14 @@ class Dataset:
             overwrite=overwrite
         )
 
+    def read_asset_params(self, asset_type):
+        """Read the parameters for an asset in JSON format."""
+
+        # Write the params object to the appropriate path for the asset type
+        return self.read_json(
+            self.filelib.path_join(asset_type, "params.json")
+        )
+
     def write_asset_env(self, asset_type, env, overwrite=False):
         """Write out the parameters for an asset in JSON format."""
 

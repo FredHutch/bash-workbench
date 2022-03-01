@@ -281,6 +281,76 @@ def make_parser():
             }
         ),
         dict(
+            key="save_tool_params",
+            help="""
+            Save the parameters used to run the tool in a particular dataset
+            """,
+            kwargs={
+                "path": dict(
+                    type=str,
+                    default=os.getcwd(),
+                    help="Dataset folder containing parameters to be saved"
+                ),
+                "name": dict(
+                    type=str,
+                    required=True,
+                    help="Name associated with saved parameters"
+                ),
+                "overwrite": dict(
+                    action="store_true",
+                    help="If specified, overwrite any existing parameters with the same name"
+                )
+            }
+        ),
+        dict(
+            key="save_launcher_params",
+            help="""
+            Save the parameters used to run the launcher in a particular dataset
+            """,
+            kwargs={
+                "path": dict(
+                    type=str,
+                    default=os.getcwd(),
+                    help="Dataset folder containing parameters to be saved"
+                ),
+                "name": dict(
+                    type=str,
+                    required=True,
+                    help="Name associated with saved parameters"
+                ),
+                "overwrite": dict(
+                    action="store_true",
+                    help="If specified, overwrite any existing parameters with the same name"
+                )
+            }
+        ),
+        dict(
+            key="list_tool_params",
+            help="""
+            List the parameters which have been saved for this particular tool
+            """,
+            kwargs={
+                "name": dict(
+                    type=str,
+                    required=True,
+                    help="Name of the tool"
+                )
+            }
+        ),
+        dict(
+            key="list_launcher_params",
+            help="""
+            List the parameters which have been saved for this particular launcher
+            """,
+            kwargs={
+                "name": dict(
+                    type=str,
+                    required=True,
+                    help="Name of the launcher"
+                )
+            }
+        ),
+        dict(
             key="run_dataset",
             help="""
             Launch the launcher + tool which have been configured in a dataset
