@@ -26,7 +26,7 @@
   [ -d base_folder/test/linked_repositories ]
 }
 
-@test "index_dataset" {
+@test "index_folder" {
 
   # Create a folder and subfolder outside of the base folder
   rm -rf ext_data
@@ -35,7 +35,7 @@
   mkdir ${EXT_FOLDER}
 
   # Index the newly created folder as a dataset
-  wb index_dataset --path ${EXT_FOLDER}
+  wb index_folder --path ${EXT_FOLDER}
 
   # Construct the path which is expected to contain the index
   INDEX_JSON=${EXT_FOLDER}/._wb/index.json
@@ -49,7 +49,6 @@
   echo
 
   # Validate that the index contents are as expected
-  [ "$(cat ${INDEX_JSON} | jq '.type')" == '"dataset"' ]
   [ $(cat ${INDEX_JSON} | jq '.name') = '"data_folder_1"' ]
 
   # Validate that a link was created for that folder in the home directory
@@ -57,43 +56,21 @@
   (( $(diff base_folder/test/data/data_folder_1/._wb/index.json ${INDEX_JSON} | wc -l) == 0 ))
 }
 
-@test "index_collection" {
+@test "list_datasets" {
 
   # Create another subfolder outside of the base folder
   EXT_FOLDER=ext_data/data_folder_2
   mkdir ${EXT_FOLDER}
 
-  # Index the newly created folder as a collection
-  wb index_collection --path ${EXT_FOLDER}
+  # Index the newly created folder
+  wb index_folder --path ${EXT_FOLDER}
 
-  # Construct the path which is expected to contain the index
-  INDEX_JSON=${EXT_FOLDER}/._wb/index.json
-
-  # Validate that the index file was created
-  [ -s $INDEX_JSON ]
-
-  # Show the contents of the index JSON for debugging purposes
-  echo "Contents of index JSON"
-  cat ${INDEX_JSON}
-  echo
-
-  # Validate that the index contents are as expected
-  [ "$(cat ${INDEX_JSON} | jq '.type')" == '"collection"' ]
-  [ $(cat ${INDEX_JSON} | jq '.name') = '"data_folder_2"' ]
-
-  # Validate that a link was created for that folder in the home directory
-  echo "Checking for valid symlink"
-  (( $(diff base_folder/test/data/data_folder_2/._wb/index.json $INDEX_JSON | wc -l) == 0 ))
-}
-
-@test "list_datasets" {
-
-  # Create another subfolder inside the previously-created collection
+  # Create another subfolder inside the previously-created dataset
   EXT_FOLDER=ext_data/data_folder_2/data_folder_3
   mkdir $EXT_FOLDER
 
   # Index the newly created folder as a dataset
-  wb index_dataset --path ${EXT_FOLDER}
+  wb index_folder --path ${EXT_FOLDER}
 
   # List all indexed folders
   # Make sure that all three folders are found
@@ -113,18 +90,18 @@
     echo "DESC=$DESC"
 
     mkdir $FP
-    wb index_dataset --path $FP
+    wb index_folder --path $FP
     wb change_name --path $FP --name $NAME
     wb change_description --path $FP --description $DESC
   }
 
-  # Create another two subfolders inside the previously-created collection
+  # Create another two subfolders inside the previously-created dataset
   make_dataset ext_data/data_folder_2/data_folder_4a 'Data Folder 4A' 'Very Useful Data Folder 4A'
   make_dataset ext_data/data_folder_2/data_folder_4b 'Data Folder 4B' 'Very Useful Data Folder 4B'
 
   # Test the find_datasets function based on the number of datasets found
 
-  # Searching for the top-level collection will yield a single result
+  # Searching for the top-level dataset will yield a single result
   [ $(wb find_datasets --name data_folder_2 | jq 'length') == 1 ]
 
   # Searching for a subfolder will yield that folder and its parent

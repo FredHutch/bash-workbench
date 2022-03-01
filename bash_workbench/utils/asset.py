@@ -82,7 +82,7 @@ class Asset:
         dest_folder = self.WB.filelib.path_join(dataset.wb_folder, self.asset_type)
 
         # Create the folder if it does not exist
-        self.WB.filelib.mkdir_p(dest_folder)
+        dataset.setup_asset_folder(self.asset_type)
 
         # For each of the files associated with this asset
         for fn in self.list_files():

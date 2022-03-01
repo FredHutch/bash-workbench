@@ -104,29 +104,17 @@ class Workbench:
         # if they do not already exist
         self.update_base_toolkit(overwrite=False)
 
-    def index_collection(self, path:str=None):
-        "Add a collection index to a folder in the filesystem."
-
-        return self.index_folder(path=path, folder_type="collection")
-
-    def index_dataset(self, path:str=None):
-        "Add a dataset index to a folder in the filesystem."
-
-        return self.index_folder(path=path, folder_type="dataset")
-
-    def index_folder(self, path:str=None, folder_type:str=None):
+    def index_folder(self, path:str=None):
 
         assert path is not None, "Must provide --path for folder to index"
-        assert folder_type in ["dataset", "collection"], f"folder_type can be dataset or collection, not '{folder_type}'"
 
-        self.log(f"Preparing to index {folder_type} located at {path}")
+        self.log(f"Preparing to index folder: {path}")
 
         # Create a Dataset object
         ds = Dataset(path, filesystem=self.filesystem)
 
         # Create the index
-        # (can be used to index either a 'collection' or a 'dataset')
-        ds.create_index(ix_type=folder_type)
+        ds.create_index()
 
         # Finally, link this dataset to the home folder if it is not already
         # nested below a collection which is similarly linked
@@ -778,8 +766,8 @@ class Workbench:
         # Instantiate a Dataset object
         ds = Dataset(path, filesystem=self.filesystem)
 
-        msg = f"path must indicate an already-indexed dataset"
-        assert ds.index is not None and ds.index["type"] == "dataset", msg
+        msg = f"path must indicate an already-indexed folder"
+        assert ds.index is not None, msg
 
         # Instantiate the tool and launcher
         tool = Asset(WB=self, asset_type="tool", asset_name=tool)
@@ -814,9 +802,9 @@ class Workbench:
         # Instantiate the dataset object
         ds = Dataset(path)
 
-        # The folder must be set up as a dataset
-        msg = f"Folder is not an indexed dataset: {path}"
-        assert ds.index is not None and ds.index["type"] == "dataset", msg
+        # The folder must be set up as an indexed folder
+        msg = f"Folder is not an indexed folder: {path}"
+        assert ds.index is not None, msg
 
         # A tool/launcher must have been set up for this dataset
         msg = f"No {asset_type} has been set up for {path}"

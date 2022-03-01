@@ -74,30 +74,16 @@ def make_parser():
             """
         ),
         dict(
-            key="index_dataset",
+            key="index_folder",
             help="""
             Index a dataset folder, adding annotations and linking
-            to the larger tree of datasets and collections.
+            to the larger tree of indexed dataset folders.
             """,
             kwargs=dict(
                 path=dict(
                     type=str,
                     required=True,
-                    help="Location of folder to index"
-                )
-            )
-        ),
-        dict(
-            key="index_collection",
-            help="""
-            Index a collection folder, adding annotations and linking
-            to the larger tree of datasets and collections.
-            """,
-            kwargs=dict(
-                path=dict(
-                    type=str,
-                    required=True,
-                    help="Location of folder to index"
+                    help="Location of folder to index as a dataset"
                 )
             )
         ),

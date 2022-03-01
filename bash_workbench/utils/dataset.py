@@ -27,11 +27,8 @@ class Dataset:
         # read those files in and attach the data to the object
         self.read_index()
 
-        # If this is a dataset
-        if self.is_dataset():
-
-            # Read in configurations of the tool and launcher
-            self.read_asset_configs()
+        # Read in configurations of the tool and launcher, if they exist
+        self.read_asset_configs()
 
     def setup_wb_folder(self):
         """Set up the wb_folder"""
@@ -39,18 +36,21 @@ class Dataset:
         # Create the folder if it does not exist
         self.filelib.mkdir_p(self.wb_folder)
 
-    def setup_asset_folders(self):
-        """Set up folders for the tool and launcher, if they do not exist."""
+    def setup_asset_folder(self, asset_type):
+        """Set up a folders for the tool or launcher (etc.), if they do not exist."""
 
-        for subfolder in ["tool", "launcher"]:
-            self.filelib.mkdir_p(self.filepath(subfolder))
+        # The asset type must be a simple string
+        assert isinstance(asset_type, str), "Asset type must be a string"
+        assert "/" not in asset_type, "Asset type must not contain a slash"
+        assert " " not in asset_type, "Asset type must not contain a space"
+
+        self.filelib.mkdir_p(self.filepath(asset_type))
 
     def read_index(self):
         """Read in the dataset index."""
 
-        # By default, the index and type are both None
+        # By default, the index is None
         self.index = None
-        self.type = None
 
         # If the wb_folder does not exist
         if not self.filelib.exists(self.wb_folder):
@@ -63,26 +63,11 @@ class Dataset:
         # a null value if the file does not exist
         self.index = self.read_json("index.json")
 
-        # If an index has been created
-        if self.index is not None:
-
-            # Set the type of the dataset from the `type` field
-            self.type = self.index["type"]
-            msg = f"Folder type can be dataset or collection, not {self.type}"
-            assert self.type in ["dataset", "collection"], msg
-
-        else:
-            self.type = None
-
     def read_asset_configs(self):
         """Read in files describing the dataset's tool and launcher."""
 
         self.tool = self.read_json("tool/config.json")
         self.launcher = self.read_json("launcher/config.json")
-
-    def is_dataset(self):
-        """Return True if the folder is indexed as a dataset."""
-        return isinstance(self.type, str) and self.type == "dataset"
 
     def read_json(self, fn):
         """
@@ -138,29 +123,11 @@ class Dataset:
 
         return self.filelib.path_join(self.wb_folder, filename)
 
-    def create_index(self, ix_type:str=None):
-        """Add an index to a folder, can be either 'dataset' or 'collection'."""
+    def create_index(self):
+        """Add an index to a folder."""
 
         # Raise an error if there already is an index
         assert self.index is None, f"Already indexed, cannot overwrite ({self.path})"
-
-        # ix_type can only be 'dataset' or 'collection'
-        msg = "ix_type can only be 'dataset' or 'collection'"
-        assert ix_type in ["dataset", "collection"]
-
-        # Set the type of this object
-        self.type = ix_type
-
-        # Get the parent of this directory
-        parent_dir = self.filelib.dirname(self.path)
-
-        # Make a Dataset object, so that we can check if it has been indexed
-        parent_dataset = Dataset(path=parent_dir)
-
-        # The parent cannot be a dataset, since we cannot nest a
-        # dataset or collection inside of a dataset
-        msg = f"Cannot index a folder inside an existing dataset ({parent_dir})"
-        assert parent_dataset.index is None or parent_dataset.index["type"] == "collection", msg
 
         # Set up the wb_folder for the index file to be placed within
         self.setup_wb_folder()
@@ -171,7 +138,6 @@ class Dataset:
         #  - unique identifier
         self.index = dict(
             uuid=str(uuid.uuid4()),
-            type=ix_type,
             indexed_at=self.timestamp.encode(),
             name=self.path.rsplit("/", 1)[-1],
             description=""
@@ -179,12 +145,6 @@ class Dataset:
 
         # Write it to the file
         self.write_index()
-
-        # If the folder is a dataset
-        if self.is_dataset():
-
-            # Create folders for the tool and launcher
-            self.setup_asset_folders()
 
     def write_index(self, indent=4, sort_keys=True, overwrite=False):
         """Write the dataset index to the filesystem."""
@@ -201,6 +161,9 @@ class Dataset:
     def write_asset_params(self, asset_type, params, indent=4, sort_keys=True, overwrite=False):
         """Write out the parameters for an asset in JSON format."""
 
+        # Make sure that a folder exists for this asset type
+        self.setup_asset_folder(asset_type)
+
         # Write the params object to the appropriate path for the asset type
         self.write_json(
             self.filelib.path_join(asset_type, "params.json"),
@@ -212,6 +175,9 @@ class Dataset:
 
     def write_asset_env(self, asset_type, env, overwrite=False):
         """Write out the parameters for an asset in JSON format."""
+
+        # Make sure that a folder exists for this asset type
+        self.setup_asset_folder(asset_type)
 
         # Format a script which will be used to set environment variables in BASH
         env_script = "\n\n".join(["#!/bin/bash", "set -e", "####"])
