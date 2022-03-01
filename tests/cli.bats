@@ -24,6 +24,7 @@
   [ -d base_folder/test/tool ]
   [ -d base_folder/test/repositories ]
   [ -d base_folder/test/linked_repositories ]
+  [ -d base_folder/test/params ]
 }
 
 @test "index_folder" {

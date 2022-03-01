@@ -85,7 +85,15 @@ class Workbench:
             self.log(f"Exists {self.home_folder}")
 
         # For each of a series of subfolders
-        for subfolder in ["data", "launcher", "tool", "helper", "repositories", "linked_repositories"]:
+        for subfolder in [
+            "data",
+            "launcher",
+            "tool",
+            "helper",
+            "repositories",
+            "linked_repositories",
+            "params"
+        ]:
 
             # Construct the path for this subfolder inside the root folder
             fp = self._top_level_folder(subfolder)
@@ -233,7 +241,7 @@ class Workbench:
             n += 1
 
             # Make a new the path to the symlink
-            home_symlink = self._top_level_folder(f"{folder_name}_{n}")
+            home_symlink = self._top_level_folder(f"data/{folder_name}_{n}")
 
         # Add a symlink
         self.filelib.symlink(path, home_symlink)
