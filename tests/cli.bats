@@ -23,6 +23,7 @@
   [ -d base_folder/test/data ]
   [ -d base_folder/test/tool ]
   [ -d base_folder/test/repositories ]
+  [ -d base_folder/test/linked_repositories ]
 }
 
 @test "index_dataset" {

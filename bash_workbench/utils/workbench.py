@@ -85,7 +85,7 @@ class Workbench:
             self.log(f"Exists {self.home_folder}")
 
         # For each of a series of subfolders
-        for subfolder in ["data", "launcher", "tool", "helper", "repositories"]:
+        for subfolder in ["data", "launcher", "tool", "helper", "repositories", "linked_repositories"]:
 
             # Construct the path for this subfolder inside the root folder
             fp = self._top_level_folder(subfolder)
