@@ -31,39 +31,48 @@ def cli():
         logger=logger
     )
 
-    # Run the specified command, passing through the arguments
-    # which were not used to specify the configuration of the
-    # Workbench object itself
-    r = WB._run_function(
-        args.func,
-        **{
-            k: v
-            for k, v in args.__dict__.items()
-            if k not in [
-                "func",
-                "filesystem",
-                "base_folder",
-                "profile",
-                "print_format"
-            ]
-        }
-    )
+    # If the user did not provide any command to run
+    if "func" not in args.__dict__:
 
-    # Print the returned value of the function, if there is any
+        # Start the interactive menu
+        wb.utils.menu.WorkbenchMenu(WB)
 
-    # If there is a value which was returned
-    if r is not None:
+    # If a command was provided
+    else:
 
-        # Transform the data into a string based on the serialization
-        # method specified by the user
-
-        print_funcs = dict(
-            json = lambda r: print(json.dumps(r, indent=4)),
-            yaml = lambda r: print(yaml.dump(r))
+        # Run the specified command, passing through the arguments
+        # which were not used to specify the configuration of the
+        # Workbench object itself
+        r = WB._run_function(
+            args.func,
+            **{
+                k: v
+                for k, v in args.__dict__.items()
+                if k not in [
+                    "func",
+                    "filesystem",
+                    "base_folder",
+                    "profile",
+                    "print_format"
+                ]
+            }
         )
 
-        # Invoke the function, falling back to print() for other types
-        print_funcs.get(
-            args.print_format,
-            lambda r: print(r)
-        )(r)
+        # Print the returned value of the function, if there is any
+
+        # If there is a value which was returned
+        if r is not None:
+
+            # Transform the data into a string based on the serialization
+            # method specified by the user
+
+            print_funcs = dict(
+                json = lambda r: print(json.dumps(r, indent=4)),
+                yaml = lambda r: print(yaml.dump(r))
+            )
+
+            # Invoke the function, falling back to print() for other types
+            print_funcs.get(
+                args.print_format,
+                lambda r: print(r)
+            )(r)
