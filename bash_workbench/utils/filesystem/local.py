@@ -35,6 +35,11 @@ def rmdir(path):
     if os.path.exists(path):
         shutil.rmtree(path)
 
+def rm(path):
+    """Delete a path, if it exists."""
+    if os.path.exists(path):
+        os.remove(path)
+
 def listdir(path):
     """List the contents of a directory."""
     return os.listdir(path)

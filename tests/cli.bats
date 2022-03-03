@@ -288,3 +288,33 @@
   [ ! -d base_folder/test/repositories/FredHutch/bash-workbench-tools ]
 
 }
+
+@test "link_local_repository" {
+
+  # Clone a repository to a folder outside of the home directory
+  rm -rf local_repositories
+  mkdir local_repositories
+  cd local_repositories
+  git clone https://github.com/FredHutch/bash-workbench-tools.git
+  cd ..
+
+  # Add a link to that repository
+  echo "Linking repository"
+  wb link_local_repo --path $PWD/local_repositories/bash-workbench-tools --name bash_workbench_tools
+
+  # Make sure that the repository has been linked
+  LINKED_REPO_LIST="$(wb list_linked_repos)"
+  echo "${LINKED_REPO_LIST}"
+  [[ $(echo ${LINKED_REPO_LIST} | jq 'length') == 1 ]]
+  [[ $(echo ${LINKED_REPO_LIST} | jq '.[0]') == *"bash_workbench_tools"* ]]
+
+  # Remove the link
+  echo "Unlinking repository"
+  wb unlink_local_repo --name bash_workbench_tools
+
+  # Make sure that the repository has been unlinked
+  echo "${LINKED_REPO_LIST}"
+  LINKED_REPO_LIST="$(wb list_linked_repos)"
+  [[ $(echo ${LINKED_REPO_LIST} | jq 'length') == 0 ]]
+
+}

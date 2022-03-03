@@ -408,6 +408,44 @@ def make_parser():
                     help="Name of repository to update (e.g. FredHutch/bash-workbench-tools)"
                 )
             }
+        ),
+        dict(
+            key="list_linked_repos",
+            help="""
+            Print a list of the local repositories which have been linked
+            """,
+            kwargs={}
+        ),
+        dict(
+            key="link_local_repo",
+            help="""
+            Link a local repository (containing a ._wb/ directory of tools and/or launchers)
+            """,
+            kwargs={
+                "name": dict(
+                    type=str,
+                    required=True,
+                    help="Name to use for linked repository"
+                ),
+                "path": dict(
+                    type=str,
+                    required=True,
+                    help="Path to local repository which should be linked"
+                )
+            }
+        ),
+        dict(
+            key="unlink_local_repo",
+            help="""
+            Remove a link to a local repository
+            """,
+            kwargs={
+                "name": dict(
+                    type=str,
+                    required=True,
+                    help="Name used for linked repository"
+                )
+            }
         )
     ]
 

@@ -905,7 +905,7 @@ class Workbench:
         assert name is not None, msg
 
         msg = "Name cannot contain slashes or spaces"
-        assert " " not in name and "/" not in name, msg
+        assert self.is_simple_name(name), msg
 
         # Read the params which have been saved for this asset
         self.log(f"Reading parameters for {asset_type} ({path})")
@@ -1062,6 +1062,40 @@ class Workbench:
 
         return repo_list
 
+    def list_linked_repos(self):
+        """Return a list of the local repositories which have been linked."""
+
+        return self.filelib.listdir(
+            self._top_level_folder("linked_repositories")
+        )
+
+    def link_local_repo(self, path=None, name=None):
+        """Link a local repository (containing a ._wb/ directory of tools and/or launchers)."""
+
+        # The name cannot contain slashes or spaces
+        msg = "The name can only contain letters and numbers"
+        assert self.is_simple_name(name), msg
+
+        # The name cannot have already been used for a local repository
+        assert name not in self.list_linked_repos(), f"{name} has already been used"
+
+        # The path to the local repository must exist
+        assert self.filelib.exists(path), f"Path does not exist: {path}"
+
+        # Make a link
+        self.log(f"Linking to {path} as '{name}'")
+        self.filelib.symlink(path, self._top_level_folder(f"linked_repositories/{name}"))
+
+    def unlink_local_repo(self, name=None):
+        """Remove a link to a local repository."""
+
+        # The name must have already been used for a local repository
+        assert name in self.list_linked_repos(), f"{name} is not a valid link"
+
+        # Delete the link
+        self.log(f"Removing link '{name}'")
+        self.filelib.rm(self._top_level_folder(f"linked_repositories/{name}"))
+
     def update_repo(self, name=None):
         """Update a repository to the latest version."""
 
@@ -1100,3 +1134,9 @@ class Workbench:
         # Delete the repository
         self.log(f"Deleting repository {name}")
         repo.delete()
+
+    def is_simple_name(self, name):
+        """Check that a name contains only alphanumeric and underscores."""
+
+        assert isinstance(name, str), "Input to `is_simple_name` must be a string"
+        return name.replace("_", "").isalnum()
