@@ -1,7 +1,8 @@
 import bash_workbench as wb
-from  bash_workbench.utils.asset import Asset
-from  bash_workbench.utils.dataset import Dataset
-from  bash_workbench.utils.repository import Repository
+from bash_workbench.utils.asset import Asset
+from bash_workbench.utils.dataset import Dataset
+from bash_workbench.utils.repository import Repository
+from bash_workbench.utils.datasets import Datasets
 from importlib_resources import files
 
 class Workbench:
@@ -270,96 +271,26 @@ class Workbench:
         # Return the list of all folders which are linked
         return linked_folders
 
-    def list_datasets(self):
-        "Return a list of all datasets linked from the home folder."
+    def update_datasets(self):
+        """Parse all of the datasets available from the home directory."""
 
-        # Format datasets as a dict, keyed by uuid
-        datasets = dict()
+        # Instantiate a collection of Datasets
+        self.datasets = Datasets()
 
-        # Iterate over all of the datasets and collections linked to the homd folder
+        # Iterate over all of the datasets and collections linked to the home folder
         for ds in self.walk_home_tree():
 
-            # Add the dataset attributes to the config object
-            ds.index["path"] = ds.path
-            ds.index["children"] = ds.children()
+            # Add the dataset to the collection
+            self.datasets.add(ds)
 
-            # Add it to the dict
-            datasets[ds.index["uuid"]] = ds.index
+    def list_datasets(self):
+        """Return a list of all datasets linked from the home folder."""
 
-        # Add the parent information to the dataset field
-        # Iterate over each dataset
-        for dataset_uuid in datasets:
+        # Parse all of the datasets available from the home directory
+        self.update_datasets()
 
-            # Iterate over its children
-            for child_uuid in datasets[dataset_uuid]["children"]:
-
-                # Add the dataset uuid to the 'parent' field in the child
-                datasets[child_uuid]["parent"] = dataset_uuid
-                
-        return datasets
-
-    def _filter_datasets(self, datasets, field=None, value=None):
-        """Filter a list of datasets by a single query term."""
-
-        # For tags, the 'value' must be "{key}={value}"
-        if field == "tag":
-
-            msg = "To filter by tag, provide query in the format 'key=value'"
-            assert "=" in value, msg
-            assert value.endswith("=") is False, msg
-
-            # parse the tag key and value
-            key, value = value.split("=", 1)
-
-            # Get the list of uuids for datasets which contain this term
-            matching_uuids = [
-                dataset_uuid
-                for dataset_uuid, dataset in datasets.items()
-                if dataset.get("tags", {}).get(key) == value
-            ]
-
-        # For all other query fields
-        else:
-
-            # Get the list of uuids for datasets which contain this term
-            matching_uuids = [
-                dataset_uuid
-                for dataset_uuid, dataset in datasets.items()
-                if value in dataset[field]
-            ]
-
-        # Make a set of datasets to keep
-        to_keep = set()
-
-        # For each of the matching uuids
-        for dataset_uuid in matching_uuids:
-
-            # Iterate over the chain of parents back to the root
-            while dataset_uuid is not None:
-
-                # Add it to the set
-                to_keep.add(dataset_uuid)
-
-                # Move to the parent
-                dataset_uuid = datasets[dataset_uuid].get("parent")
-
-        # Keep the datasets which are in this path
-        datasets = {
-            dataset_uuid: dataset
-            for dataset_uuid, dataset in datasets.items()
-            if dataset_uuid in to_keep
-        }
-
-        # Update the 'children' field of each to only contain datasets in the path
-        for dataset_uuid in datasets:
-
-            # If there are any children
-            if len(datasets[dataset_uuid].get("children", [])) > 0:
-
-                # Subset the list to only overlap with `to_keep`
-                datasets[dataset_uuid]["children"] = list(set(datasets[dataset_uuid]["children"]) & to_keep)
-
-        return datasets
+        # Return the simple dict of all datasets
+        return self.datasets.datasets
 
     def find_datasets(
         self,
@@ -369,8 +300,28 @@ class Workbench:
     ):
         """Find any datasets which match the provided queries."""
 
-        # Get the list of all datasets linked from the home folder
-        datasets = self.list_datasets()
+        # Parse all of the datasets available from the home directory
+        self.update_datasets()
+
+        # Filter the datasets based on the name, description, and/or tag filters provided
+        self.filter_datasets(
+            name=name,
+            description=description,
+            tag=tag
+        )
+
+        # Extract the dict of datasets which pass all of these filters, including
+        # the parent folders all the way back to the root
+        # Note that this will return a simple dict
+        datasets = self.datasets.filtered()
+
+        self.log(f"Number of datasets matching query: {len(datasets):,}")
+
+        # Return the dict of datasets found
+        return datasets
+
+    def filter_datasets(self, name=None, description=None, tag=None):
+        """Apply one or more filters to the datasets in the workbench."""
 
         # If a query name was provided
         if name is not None:
@@ -381,8 +332,8 @@ class Workbench:
 
             self.log(f"Querying datasets by name={name}")
 
-            # Only keep folders which match this query, or their parent collections
-            datasets = self._filter_datasets(datasets, field="name", value=name)
+            # Apply the filter
+            self.datasets.add_filter(field="name", value=name)
 
         # If a query description was provided
         if description is not None:
@@ -393,8 +344,8 @@ class Workbench:
 
             self.log(f"Querying datasets by description={description}")
 
-            # Only keep folders which match this query, or their parent collections
-            datasets = self._filter_datasets(datasets, field="description", value=description)
+            # Apply the filter
+            self.datasets.add_filter(field="description", value=description)
 
         # If a query tag was provided
         if tag is not None:
@@ -408,13 +359,8 @@ class Workbench:
 
                 self.log(f"Querying datasets by tag {tag_item}")
 
-                # Only keep folders which match this query, or their parent collections
-                datasets = self._filter_datasets(datasets, field="tag", value=tag_item)
-
-        self.log(f"Number of datasets matching query: {len(datasets):,}")
-
-        # Return the list of datasets found
-        return datasets
+                # Apply the filter
+                self.datasets.add_filter(field="tag", value=tag_item)
 
     def tree(
         self,
@@ -428,119 +374,18 @@ class Workbench:
         datasets which match the provided pattern, as well as their parents
         """
 
-        # Get the complete set of datasets
-        datasets = self.find_datasets(
+        # Parse all of the datasets available from the home directory
+        self.update_datasets()
+
+        # Filter the datasets based on the name, description, and/or tag filters provided
+        self.filter_datasets(
             name=name,
             description=description,
             tag=tag
         )
 
-        # Find the uuids of all datasets which do not have parents
-        root_datasets = [
-            dataset["uuid"]
-            for dataset in datasets.values()
-            if dataset.get("parent") is None
-        ]
-
-        # Recursively format each line of the tree
-        return "\n".join([
-            line
-            for line in self.yield_dataset_tree_recursive(root_datasets, datasets)
-        ])
-
-
-    def yield_dataset_tree_recursive(self, dataset_uuids, datasets_dict, indentation=""):
-        """Function to recursively print the directory structure."""
-
-        # Get the number of datasets in the list
-        dataset_n = len(dataset_uuids)
-
-        # For each dataset, set the `list_position` as 'single', 'first', 'middle', or 'last'
-        # Also set the flag `has_children` as True/False
-
-        # Iterate over each dataset
-        for dataset_i, dataset_uuid in enumerate(dataset_uuids):
-
-            # If this dataset is a singlet
-            if dataset_n == 1:
-                list_position = "single"
-
-            # If there are multiple datasets, and this is the first one
-            elif dataset_i == 0:
-                list_position = "first"
-
-            # If this is the last one in the list
-            elif dataset_i == dataset_n - 1:
-                list_position = "last"
-
-            # Otherwise, we are in the middle of a list
-            else:
-                list_position = "middle"
-
-            # Mark whether this dataset has children
-            has_children = len(datasets_dict[dataset_uuid].get("children", [])) > 0
-
-            # Yield the dataset information with the specified prefix
-            yield self.yield_dataset_tree_single(
-                datasets_dict[dataset_uuid],
-                indentation=indentation,
-                list_position=list_position,
-                has_children=has_children
-            )
-
-            # Recursively repeat the process for any children of this dataset
-            yield self.yield_dataset_tree_recursive(
-                datasets_dict[dataset_uuid].get("children", []),
-                datasets_dict,
-                # If this dataset is followed by others in this group
-                # Add a continuation character to the indentation
-                # Otherwise, there are no more in this group, and so the indentation is blank
-                indentation=indentation + "  │" if list_position in ["first", "middle"] else "   "
-            )
-
-    def yield_dataset_tree_single(
-        self,
-        dataset_info,
-        indentation="",
-        list_position=None,
-        has_children=None
-    ):
-
-        name_prefix = dict(
-            single=" └─",
-            first=" └┬",
-            last="  └",
-            middle="  ├"
-        )[list_position]
-
-        # Yield the name of the dataset
-        yield f"{indentation}{name_prefix} {dataset_info['name']}"
-
-        # Make a separate prefix for any additional lines
-        # If there are more items in the list, add a continuation
-        addl_prefix = "  │" if list_position in ["first", "middle"] else "   "
-
-        # Add another continuation if there are children below this dataset
-        addl_prefix = f'{addl_prefix}{" │" if has_children else "  "}'
-
-        # Print the uuid and any additional fields
-        fields = [
-            f"uuid: {dataset_info['uuid']}",
-            f"path: {dataset_info['path']}",
-        ]
-
-        # If there is a description
-        if len(dataset_info['description']) > 0:
-            fields.append(f"description: {dataset_info['description']}")
-
-        # If there are tags
-        if len(dataset_info.get("tags", {})) > 0:
-            for k, v in dataset_info["tags"].items():
-                fields.append(f"tag: {k} = {v}")
-
-        fields.append("")
-        for field in fields:
-            yield f"{indentation}{addl_prefix}  {field}"
+        # Format the list of dataset in tree format
+        return self.datasets.format_dataset_tree()
 
     def change_name(self, path=None, name=None):
         "Modify the name of a folder (dataset or collection)."
