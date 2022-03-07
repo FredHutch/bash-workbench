@@ -109,6 +109,17 @@ class Workbench:
             else:
                 self.log(f"Exists: {fp}")
 
+        # Add an index to the root data folder
+        self.index_folder(self._top_level_folder("data"))
+        self.change_name(
+            path=self._top_level_folder("data"),
+            name="Datasets"
+        )
+        self.change_description(
+            path=self._top_level_folder("data"),
+            description="Collection of all datasets indexed in the workbench"
+        )
+
         # Provide each of the tools and launchers defined in the repository,
         # if they do not already exist
         self.update_base_toolkit(overwrite=False)
@@ -136,6 +147,13 @@ class Workbench:
 
         # Resolve symlinks and remove any terminal slashes
         path = self.filelib.abs_path(path)
+
+        # If the path _is_ the home dataset directory
+        if path == self.filelib.abs_path(self._top_level_folder("data")):
+
+            # Do not take any further action
+            # (prevent the creation of a circular link)
+            return
 
         self.log(f"Making sure that folder is present in home tree: {path}")
 
