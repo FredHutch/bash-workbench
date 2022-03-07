@@ -56,6 +56,14 @@ def symlink(source, target):
     """Create a symlink."""
     os.symlink(source, target)
 
+def getcwd():
+    """Return the current working directory."""
+    return os.getcwd()
+
+def chdir(path):
+    """Change working directories."""
+    os.chdir(path)
+
 def read_json(path):
     """Read a file in JSON format."""
 
