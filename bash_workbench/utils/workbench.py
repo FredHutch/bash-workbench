@@ -32,16 +32,32 @@ class Workbench:
 
             # Set the location as ~/.workbench/
             base_folder = self.filelib.path_join(self.filelib.home(), "._workbench")
+        
         assert profile is not None, "Must provide profile"
 
-        # The home folder for the workbench is <base_folder>/<profile>/
-        self.home_folder = self.filelib.path_join(base_folder, profile)
-        self.base_folder = base_folder
+        # Attach the init variables to the object
         self.profile = profile
         self.filesystem = filesystem
         self.logger = logger
         self.verbose = verbose
         self.timestamp = wb.utils.timestamp.Timestamp()
+
+        # The home folder for the workbench is <base_folder>/<profile>/
+        self.home_folder = self.filelib.path_join(base_folder, profile)
+
+        # If the root folder does not exist
+        if not self.filelib.exists(self.home_folder):
+
+            # Create it
+            self.filelib.makedirs(self.home_folder)
+            self.log(f"Created {self.home_folder}")
+        
+        else:
+
+            self.log(f"Exists {self.home_folder}")
+
+        # Resolve the absolute path
+        self.home_folder = self.filelib.abs_path(self.home_folder)
 
         # Get the folder which contains assets installed with this package
         self.assets_folder = files("bash_workbench").joinpath('assets')
@@ -73,17 +89,6 @@ class Workbench:
         """Ensure that the root folder contains the required assets, and create them if necessary."""
 
         self.log(f"Setting up root folder at {self.home_folder}")
-
-        # If the root folder does not exist
-        if not self.filelib.exists(self.home_folder):
-
-            # Create it
-            self.filelib.makedirs(self.home_folder)
-            self.log(f"Created {self.home_folder}")
-        
-        else:
-
-            self.log(f"Exists {self.home_folder}")
 
         # For each of a series of subfolders
         for subfolder in [
