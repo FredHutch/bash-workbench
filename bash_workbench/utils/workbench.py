@@ -766,7 +766,7 @@ class Workbench:
         # A tool/launcher must have been set up for this dataset
         msg = f"No {asset_type} has been set up for {path}"
         assert ds.index.get(asset_type) is not None, msg
-        assert_name = ds.index.get(asset_type)
+        asset_name = ds.index.get(asset_type)
 
         # The user must specify a name to associate with the saved params
         msg = "Must specify a name to associate with the saved params"
@@ -788,7 +788,7 @@ class Workbench:
             self.filelib.path_join(
                 "params",
                 asset_type,       # 'tool' or 'launcher'
-                assert_name       # The name of the tool/launcher
+                asset_name       # The name of the tool/launcher
             )
         )
 
@@ -812,11 +812,52 @@ class Workbench:
 
             # The overwrite flag must have been set
             assert overwrite, msg
-            msg = f"Params have already been saved for {asset_type}/{assert_name}/{name}"
+            msg = f"Params have already been saved for {asset_type}/{asset_name}/{name}"
 
         # Write out the params in JSON format
         self.log(f"Saving params to {params_fp}")
         self.filelib.write_json(params, params_fp, indent=4, sort_keys=True)
+
+    def read_tool_params(self, tool_name=None, params_name=None):
+        """Read a set of parameters used to run the tool."""
+
+        return self._read_asset_params(tool_name, "tool", params_name)
+
+    def read_launcher_params(self, launcher_name=None, params_name=None):
+        """Read a set of parameters used to run the launcher."""
+
+        return self._read_asset_params(launcher_name, "launcher", params_name)
+
+    def _read_asset_params(self, asset_name, asset_type, params_name):
+        """Read a set of parameters used to run a tool or launcher."""
+
+        # The user must specify the name of the asset
+        msg = f"Must specify the {asset_type} name"
+        assert asset_name is not None, msg
+
+        # The user must specify the name of the params
+        msg = f"Must specify the name used for this set of parameters"
+        assert params_name is not None, msg
+
+        # The params name must match an entry in the tool's param folder
+        msg = f"No parameters named '{params_name}' found for {asset_type} {asset_name}"
+        assert params_name in self._list_asset_params(
+            asset_type=asset_type,
+            name=asset_name
+        ), msg
+
+        # Set up the path to the saved params
+        params_fp = self.filelib.path_join(
+            self._top_level_folder("params"),
+            asset_type,
+            asset_name,
+            f"{params_name}.json"
+        )
+
+        # Read the params which have been saved in JSON format
+        self.log(f"Reading from {params_fp}")
+
+        return self.filelib.read_json(params_fp)
 
     def list_tool_params(self, name=None):
         """List the parameters available to run the tool."""

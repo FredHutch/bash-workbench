@@ -236,6 +236,23 @@
 
 }
 
+@test "read_params" {
+
+  # Read the tool params that we saved previously
+  TOOL_PARAMS="$(wb read_tool_params --tool_name make_tar_gz --params_name best_tool_params)"
+
+  # Make sure that the saved params are correct
+  [ "$( echo ${TOOL_PARAMS} | jq 'length' )" == 2 ]
+  [ "$( echo ${TOOL_PARAMS} | jq '.archive' )" == '"TEST_ARCHIVE"' ]
+
+  # Read the launcher params that we saved previously
+  LAUNCHER_PARAMS="$(wb read_launcher_params --launcher_name base --params_name best_launcher_params)"
+
+  # Make sure that the saved params are correct
+  [ "$( echo ${LAUNCHER_PARAMS} | jq 'length' )" == 0 ]
+
+}
+
 @test "run_dataset" {
 
   # Move into the dataset that we've set up with the `make_tar_gz` launcher

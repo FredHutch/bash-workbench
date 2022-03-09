@@ -325,6 +325,42 @@ def make_parser():
             }
         ),
         dict(
+            key="read_tool_params",
+            help="""
+            Read the saved parameters used to run the tool
+            """,
+            kwargs={
+                "tool_name": dict(
+                    type=str,
+                    required=True,
+                    help="Name of the tool"
+                ),
+                "params_name": dict(
+                    type=str,
+                    required=True,
+                    help="Name associated with saved parameters"
+                )
+            }
+        ),
+        dict(
+            key="read_launcher_params",
+            help="""
+            Read the saved parameters used to run the launcher
+            """,
+            kwargs={
+                "launcher_name": dict(
+                    type=str,
+                    required=True,
+                    help="Name of the launcher"
+                ),
+                "params_name": dict(
+                    type=str,
+                    required=True,
+                    help="Name associated with saved parameters"
+                )
+            }
+        ),
+        dict(
             key="list_tool_params",
             help="""
             List the parameters which have been saved for this particular tool
