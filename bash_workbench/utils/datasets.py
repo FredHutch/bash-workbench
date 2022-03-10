@@ -138,9 +138,9 @@ class Datasets:
             # Reset the filter
             self._reset_filter_one(ds_uuid, field=field, value=value)
 
-    def filtered(self, incl_anc=True):
+    def _get_filtered_uuids(self, incl_anc=True):
         """
-        Return the collection of datasets which pass the filter.
+        Return the set of dataset UUIDs which pass the current filtering.
         By default, all datasets which contain those passing datasets will also
         be included. That behavior can be stopped by setting `incl_anc=False`
         """
@@ -176,11 +176,23 @@ class Datasets:
             # Just keep the datasets which pass the filter
             to_keep = set(passing_uuids)
 
+        return to_keep
+
+    def filtered(self, incl_anc=True):
+        """
+        Return the collection (dict) of datasets which pass the filter.
+        By default, all datasets which contain those passing datasets will also
+        be included. That behavior can be stopped by setting `incl_anc=False`
+        """
+
+        # Get the set of UUIDs to keep
+        self.filtered_uuids = self._get_filtered_uuids(incl_anc=incl_anc)
+
         # Keep the datasets which are in this set
         datasets = {
             ds_uuid: dataset
             for ds_uuid, dataset in self.datasets.items()
-            if ds_uuid in to_keep
+            if ds_uuid in self.filtered_uuids
         }
 
         # Update the 'children' field of each to only contain datasets in the set
@@ -189,19 +201,22 @@ class Datasets:
             # If there are any children
             if len(datasets[ds_uuid].get("children", [])) > 0:
 
-                # Subset the list to only overlap with `to_keep`
-                datasets[ds_uuid]["children"] = list(set(datasets[ds_uuid]["children"]) & to_keep)
+                # Subset the list to only overlap with `self.filtered_uuids`
+                datasets[ds_uuid]["children"] = list(set(datasets[ds_uuid]["children"]) & self.filtered_uuids)
 
         return datasets
 
     def format_dataset_tree(self):
         """Format a list of datasets as a tree."""
 
+        # Get the set of UUIDs to keep
+        self.filtered_uuids = self._get_filtered_uuids(incl_anc=True)
+
         # Find the uuids of all datasets which do not have parents
         root_datasets = [
             ds_uuid
             for ds_uuid, ds_info in self.datasets.items()
-            if ds_info.get("parent") is None
+            if ds_info.get("parent") is None and ds_uuid in self.filtered_uuids
         ]
 
         # Recursively format each line of the tree
@@ -239,11 +254,18 @@ class Datasets:
             else:
                 list_position = "middle"
 
+            # Get the list of children which also pass the filter
+            ds_children = [
+                child_uuid
+                for child_uuid in self.datasets[ds_uuid].get("children", [])
+                if child_uuid in self.filtered_uuids
+            ]
+
             # Mark whether this dataset has children
-            has_children = len(self.datasets[ds_uuid].get("children", [])) > 0
+            has_children = len(ds_children) > 0
 
             # Yield the dataset information with the specified prefix
-            yield self.yield_dataset_tree_single(
+            yield from self.yield_dataset_tree_single(
                 ds_uuid,
                 indentation=indentation,
                 list_position=list_position,
@@ -251,8 +273,8 @@ class Datasets:
             )
 
             # Recursively repeat the process for any children of this dataset
-            yield self.yield_dataset_tree_recursive(
-                self.datasets[ds_uuid].get("children", []),
+            yield from self.yield_dataset_tree_recursive(
+                ds_children,
                 # If this dataset is followed by others in this group
                 # Add a continuation character to the indentation
                 # Otherwise, there are no more in this group, and so the indentation is blank

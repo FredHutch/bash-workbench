@@ -12,7 +12,8 @@
             "help": "Directory targeted for compression (all subfolders will be included recursively).",
             "wb_env": "TARGET",
             "wb_type": "folder",
-            "nargs": 1
+            "nargs": 1,
+            "required": true
         }
     }
 }
