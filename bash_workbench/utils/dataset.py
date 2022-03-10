@@ -36,15 +36,31 @@ class Dataset:
         # Create the folder if it does not exist
         self.filelib.mkdir_p(self.wb_folder)
 
-    def setup_asset_folder(self, asset_type):
-        """Set up a folders for the tool or launcher (etc.), if they do not exist."""
+    def validate_asset_type_format(self, asset_type):
+        """Make sure that the asset type string is valid."""
 
         # The asset type must be a simple string
         assert isinstance(asset_type, str), "Asset type must be a string"
         assert "/" not in asset_type, "Asset type must not contain a slash"
         assert " " not in asset_type, "Asset type must not contain a space"
 
+    def setup_asset_folder(self, asset_type):
+        """Set up a folders for the tool or launcher (etc.), if they do not exist."""
+
+        # Make sure that the asset type string is valid
+        self.validate_asset_type_format(asset_type)
+
+        # Make the folder
         self.filelib.mkdir_p(self.filepath(asset_type))
+
+    def delete_asset_folder(self, asset_type):
+        """Delete an asset folder, if it exists."""
+
+        # Make sure that the asset type string is valid
+        self.validate_asset_type_format(asset_type)
+
+        # Remove the asset folder
+        self.filelib.rmdir(self.filepath(asset_type))
 
     def read_index(self):
         """Read in the dataset index."""
