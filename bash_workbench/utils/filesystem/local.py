@@ -11,6 +11,10 @@ def exists(path):
     """Path exists on the local filesystem."""
     return os.path.exists(path)
 
+def getsize(path):
+    """Size of file object."""
+    return os.path.getsize(path)
+
 def isdir(path):
     """The path is a directory."""
     return os.path.isdir(path)
