@@ -206,6 +206,67 @@ class Datasets:
 
         return datasets
 
+    def filtered_paths(self, sep=" : "):
+        """
+        Return a list of filtered datasets in the format:
+        <NAME_HIERARCHY> : <PATH_HIERARCHY>
+        Where NAME_HIERARCHY is the <NAME>/<NAME>/etc. from root to the dataset, and
+        where PATH_HIERARCHY is the <PATH>/<PATH>/etc. from root to the dataset.
+        """
+
+        # Get the dict of all filtered datasets
+        ds_dict = self.filtered()
+
+        # Make a dict of the name hierarchy for each dataset
+        names = {
+            k: "/".join([
+                ds_dict[i]["name"]
+                for i in self.path_to_root(ds_dict, k)
+            ])
+            for k in ds_dict
+        }
+
+        # Make a dict of the path hierarchy for each dataset
+        paths = {
+            k: "/".join([
+                ds_dict[i]["path"].rsplit("/", 1)[-1]
+                for i in self.path_to_root(ds_dict, k)
+            ])
+            for k in ds_dict
+        }
+
+        # Make a list of the <NAME> : <PATH> combined strings if <NAME> != <PATH>
+        # Otherwise just return the <PATH>
+        name_path_list = [
+            sep.join([names[k], paths[k]]) if names[k] != paths[k] else names[k]
+            for k in ds_dict
+        ]
+
+        # Sort it
+        name_path_list.sort()
+
+        # Return the sorted list
+        return name_path_list
+
+    def path_to_root(self, d, k, reverse=True):
+        """
+        For any dict, return the list of keys from the dict d
+        which start from k and extend iteratively to each
+        entry d[k]['parent'] (if that parent is not null).
+        If reverse is True, return a list which starts from the
+        root and ends at k.
+        """
+
+        l = list()
+        while k is not None and k in d:
+            l.append(k)
+            k = d[k].get('parent')
+
+        if reverse:
+            return l[::-1]
+        else:
+            return l
+
     def format_dataset_tree(self):
         """Format a list of datasets as a tree."""
 

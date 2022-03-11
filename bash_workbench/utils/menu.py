@@ -1,5 +1,4 @@
 # Import the Workbench class to specify input type
-from socket import MsgFlag
 from .workbench import Workbench
 from .dataset import Dataset
 from .asset import Asset
@@ -19,15 +18,30 @@ class WorkbenchMenu:
         # Parse all of the datasets available from the home directory
         self.wb.update_datasets()
 
-        # Set up a list of filters which will be applied to
-        # the datasets which are displayed to the user
-        self.filters = []
-
         # Set the current working directory
         self.cwd = self.wb.filelib.getcwd()
 
         # Start at the main manu
         self.main_menu()
+
+    def questionary(self, fname, msg, **kwargs):
+        """Wrap questionary functions to catch escapes and exit gracefully."""
+
+        # Get the questionary function
+        questionary_f = questionary.__dict__.get(fname)
+
+        # Make sure that the function exists
+        assert questionary_f is not None, f"No such questionary function: {fname}"
+
+        # Get the response
+        resp = questionary_f(msg, **kwargs).ask()
+
+        # If the user escaped the question
+        if resp is None:
+            self.exit()
+
+        # Otherwise
+        return resp
 
     def select_func(self, prompt, options, **kwargs):
         """Prompt the user to select from a list of functions to execute."""
@@ -51,13 +65,14 @@ class WorkbenchMenu:
             assert callable(option[1]), msg
 
         # Get the selection from the user
-        selection = questionary.select(
+        selection = self.questionary(
+            "select",
             prompt,
             choices=[
                 option[0]
                 for option in options
             ]
-        ).ask()
+        )
 
         # Call the function provided, including any additional keywords
         # provided by the user when calling this wrapper function
@@ -71,6 +86,12 @@ class WorkbenchMenu:
           move to the root folder,
           or exit.
         """
+
+        # If this is the home directory of the workbench
+        if self.cwd == self.wb.home_folder:
+
+            # It does not need to be indexed
+            return
 
         # Try to read an index for the cwd, if one exists
         ds = Dataset(self.cwd)
@@ -109,14 +130,17 @@ class WorkbenchMenu:
 
         # Print:
         #   Any filters which have been applied
-        for filter_item in self.filters:
+        for filter_item in self.wb.datasets.filters:
             self.wb.log(f"Dataset display filter: {filter_item}")
 
-        # Print:
-        #   Name, description, tags of cwd
-        ds = Dataset(self.cwd)
-        for key, val in ds.index.items():
-            self.wb.log(f"{key}: {val}")
+        # If this is not the home directory
+        if self.cwd != self.wb.home_folder:
+
+            # Print:
+            #   Name, description, tags of cwd
+            ds = Dataset(self.cwd)
+            for key, val in ds.index.items():
+                self.wb.log(f"{key}: {val}")
 
         # Select a submenu
         # The user selection will run a function
@@ -237,7 +261,8 @@ class WorkbenchMenu:
 
         # Prompt the user to run the tool now or
         # save it to run later
-        response = questionary.select(
+        response = self.questionary(
+            "select",
             "Would you like to run the dataset now?",
             choices = [
                 "Run now",
@@ -288,7 +313,8 @@ class WorkbenchMenu:
 
             # Ask the user if they want to replace this asset
             # or keep it
-            response = questionary.select(
+            response = self.questionary(
+                "select",
                 f"Previously selected {asset_type}: {asset_config.get('name')}",
                 choices=[
                     f"Run previously selected {asset_type}",
@@ -323,10 +349,11 @@ class WorkbenchMenu:
         ]
 
         # At this point, the user must select an {asset_type} to run
-        selected_asset = questionary.select(
+        selected_asset = self.questionary(
+            "select",
             f"Select {asset_type}",
             choices=choices
-        ).split(": ", 1)[0]
+        )
 
         self.wb.log(f"Selected {asset_type} = {selected_asset}")
 
@@ -387,7 +414,8 @@ class WorkbenchMenu:
 
             # Ask the user if they would like to load any of these params
             decline_response = "No thank you"
-            selection = questionary.select(
+            selection = self.questionary(
+                "select",
                 "Would you like to load a set of saved parameters?",
                 choices=[decline_response] + saved_params
             )
@@ -446,7 +474,8 @@ class WorkbenchMenu:
             self.log(f"Default: {default}")
 
             # Ask the user if they want to provide a different value
-            resp = questionary.select(
+            resp = self.questionary(
+                "select",
                 self.argument_header(
                     arg,
                     "Would you like to provide a different value?"
@@ -466,7 +495,8 @@ class WorkbenchMenu:
         if (arg.get("required", False) is False) and (arg.get("nargs") not in ["?", "*"]):
 
             # Ask the user if they want to provide any value at all
-            resp = questionary.select(
+            resp = self.questionary(
+                "select",
                 self.argument_header(
                     arg,
                     "Would you like to provide a value for this optional argument?"
@@ -540,30 +570,33 @@ class WorkbenchMenu:
         # Print the header
         self.argument_header(arg, "Provide value")
 
-        # Prompt the user and add to the list
-        responses.append(
-            self.__dict__[f"prompt_user_{arg.get('wb_type', 'unspecified')}"](arg)
-        )
+        # Prompt the user
+        resp = self.__dict__[f"prompt_user_{arg.get('wb_type', 'unspecified')}"](arg)
+
+        self.catch_escape(resp)
+        
+        # Add to the list
+        responses.append(resp)
 
     def prompt_user_string(self, arg):
         """Function called for arguments with wb_type == 'string'."""
 
-        return questionary.text("string:").ask()
+        return self.questionary("text", "string:")
 
     def prompt_user_password(self, arg):
         """Function called for arguments with wb_type == 'password'."""
 
-        return questionary.password("password:").ask()
+        return self.questionary("password", "password:")
 
     def prompt_user_folder(self, arg):
         """Function called for arguments with wb_type == 'folder'."""
 
-        return questionary.path("folder:", only_directories=True).ask()
+        return self.questionary("path", "folder:", only_directories=True)
 
     def prompt_user_file(self, arg):
         """Function called for arguments with wb_type == 'file'."""
 
-        return questionary.path("file:").ask()
+        return self.questionary("path", "file:")
 
     def prompt_user_select(self, arg):
         """Function called for arguments with wb_type == 'select'."""
@@ -572,7 +605,7 @@ class WorkbenchMenu:
         msg = "Must provide `wb_choices` for arguments where `wb_type` == 'select'"
         assert choices is not None, msg
 
-        return questionary.select("select:", choices=choices).ask()
+        return self.questionary("select", "select:", choices=choices)
 
     def prompt_user_unspecified(self, arg):
         """Function called if `wb_type` is not specified for an argument."""
@@ -582,34 +615,49 @@ class WorkbenchMenu:
     def argument_header(self, arg, msg):
         """Format a descriptive header for a single argument."""
 
-        return f"""Field: {arg['key']}
-{arg['help']}
-{msg}"""
+        return textwrap.dedent(f"""
+        Field: {arg['key']}
+        {arg['help']}
+        {msg}""")
     
-    def change_directory_menu(self):
+    def change_directory_menu(self, sep=" : "):
         """Select an indexed directory and navigate to it."""
 
         # Get a path which passes the current filter
-        path = questionary.path(
-            message="Select a dataset",
-            complete_style="MULTI_COLUMN",
-            only_directories=True,
-            validate=self.wb.datasets.passes_filter.get,
-            file_filter=self.wb.datasets.passes_filter.get
+        resp = self.questionary(
+            "autocomplete",
+            "Start typing the name of a dataset from the list above",
+            choices=self.wb.datasets.filtered_paths(sep=sep)
+            # # complete_style="MULTI_COLUMN",
+            # only_directories=True,
+            # validate=self.wb.datasets.passes_filter.get,
+            # file_filter=self.wb.datasets.passes_filter.get
         )
 
+        # The path of the selected dataset is the final entry
+        path = resp.rsplit(sep, 1)[-1]
+
+        self.wb.log(f"Moving to dataset {path}")
+
         # Move to that directory
-        self.change_directory(path)
+        self.change_directory(
+            self.wb.filelib.path_join(
+                self.wb.home_folder,
+                "data",
+                path
+            )
+        )
 
     def import_folder(self):
         """Import a folder from the filesystem."""
 
         # Prompt for the folder to add
-        folder_to_import = questionary.path(
-            message="Select a folder to be added to your workbench",
+        folder_to_import = self.questionary(
+            "path",
+            "Select a folder to be added to your workbench",
             complete_style="READLINE_LIKE",
             only_directories=True
-        ).ask()
+        )
 
         # Try to add the folder
         try:
@@ -674,10 +722,10 @@ class WorkbenchMenu:
         """Download a GitHub repository."""
 
         # Get the name of the repository to download
-        repo_name = questionary.text("Repository name")
+        repo_name = self.questionary("text", "Repository name")
 
         # If the user is not sure
-        if not questionary.confirm(f"Confirm - download repository {repo_name}"):
+        if not self.questionary("confirm", f"Confirm - download repository {repo_name}"):
 
             # Go back to the repository menu
             self.manage_repositories_menu()
@@ -695,10 +743,17 @@ class WorkbenchMenu:
         """Link a local a GitHub repository."""
 
         # Get the folder containing the repository to link
-        repo_fp = questionary.path("Repository location", only_directories=True)
+        repo_fp = self.questionary(
+            "path",
+            "Repository location",
+            only_directories=True
+        )
 
         # If the user is not sure
-        if not questionary.confirm(f"Confirm - link local repository {repo_fp}"):
+        if not self.questionary(
+            "confirm",
+            f"Confirm - link local repository {repo_fp}"
+        ):
 
             # Go back to the repository menu
             self.manage_repositories_menu()
@@ -750,7 +805,10 @@ class WorkbenchMenu:
         """Remove a link to a local repository."""
 
         # If the user is not sure
-        if not questionary.confirm(f"Confirm - remove link to repository '{repo_name}'"):
+        if not self.questionary(
+            "confirm",
+            f"Confirm - remove link to repository '{repo_name}'"
+        ):
 
             # Go back to the repository menu
             self.manage_repositories_menu()
@@ -768,7 +826,10 @@ class WorkbenchMenu:
         """Update a local repository to the most recent version."""
 
         # If the user is not sure
-        if not questionary.confirm(f"Confirm - update local copy of repository {repo_name}"):
+        if not self.questionary(
+            "confirm",
+            f"Confirm - update local copy of repository {repo_name}"
+        ):
 
             # Go back to the repository menu
             self.manage_repositories_menu()
@@ -786,7 +847,10 @@ class WorkbenchMenu:
         """Delete the local copy of a downloaded repository."""
 
         # If the user is not sure
-        if not questionary.confirm(f"Confirm - delete local copy of repository {repo_name}"):
+        if not self.questionary(
+            "confirm",
+            f"Confirm - delete local copy of repository {repo_name}"
+        ):
 
             # Go back to the repository menu
             self.manage_repositories_menu()
@@ -804,10 +868,13 @@ class WorkbenchMenu:
         """Switch the branch of a local repository."""
 
         # Get the name of the branch to switch to
-        branch_name = questionary.text("Name of branch")
+        branch_name = self.questionary("text", "Name of branch")
 
         # If the user is not sure
-        if not questionary.confirm(f"Confirm - switch repository {repo_name} to branch {branch_name}"):
+        if not self.questionary(
+            "confirm",
+            f"Confirm - switch repository {repo_name} to branch {branch_name}"
+        ):
 
             # Go back to the repository menu
             self.manage_repositories_menu()
@@ -851,3 +918,94 @@ class WorkbenchMenu:
 
         self.wb.log("Closing the BASH Workbench -- restart at any time with: wb")
         sys.exit(0)
+
+    def add_remove_filters(self):
+        """Menu to add or remove filters to the set of displayed datasets."""
+
+        # Print:
+        #   Dataset tree beneath the cwd
+        print(self.wb.datasets.format_dataset_tree())
+
+        # Print:
+        #   Any filters which have been applied
+        for filter_item in self.wb.datasets.filters:
+            self.wb.log(f"Dataset display filter: {filter_item}")
+
+        # Make a list of options
+        options = [("Add filter", self.add_filter)]
+
+        # If there are any filters
+        if len(self.wb.datasets.filters) > 0:
+            options.append(("Remove filter", self.remove_filter))
+
+        # Always let the user go back without taking an action
+        options.append(("Back to main menu", self.main_menu))
+
+        # Present the menu
+        self.select_func(
+            "Add or remove a filter on the displayed datasets",
+            options
+        )
+
+    def remove_filter(self):
+        """Remove one of the filters applied to the datasets."""
+
+        # If there are filters to remove
+        if len(self.wb.datasets.filters) > 0:
+
+            # Pick a filter to remove
+            resp = self.questionary(
+                "select",
+                "Select a filter to remove",
+                choices=[
+                    f"{field}: {value}"
+                    for field, value in self.wb.datasets.filters
+                ]
+            )
+
+            [field, value] = resp.split(": ", 1)
+
+            self.wb.log(f"Removing filter {resp}")
+            self.wb.datasets.remove_filter(field=field, value=value)
+
+        # Go back to the previous menu
+        self.add_remove_filters()
+
+    def add_filter(self):
+        """Add a filter to the set of displayed dadtasets."""
+
+        # Pick a field of the dataset to filter by
+        field = self.questionary(
+            "select",
+            "Filter type",
+            choices=[
+                "name",
+                "description",
+                "tag",
+            ]
+        )
+
+        value = None
+
+        # Make sure that any entries for tags have the = delimiter
+        while value is None or (field == "tag" and "=" not in value):
+
+            # If the user selected a tag and they did not provide the format "key=value"
+            if value is not None:
+                self.wb.log("To filter by tag, you must use the format: key=value")
+
+            # Get the filter value
+            value = self.questionary(
+                "text",
+                dict(
+                    name="Only show datasets with names that contain the string:",
+                    description="Only show datasets with descriptions that contain the string:",
+                    tag="Only show datasets which have the tag (key=value):"
+                )[field]
+            )
+
+        # Add the filter
+        self.wb.datasets.add_filter(field=field, value=value)
+
+        # Back to the previous menu
+        self.add_remove_filters()
