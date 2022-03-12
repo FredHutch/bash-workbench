@@ -1,4 +1,5 @@
 # Import the Workbench class to specify input type
+from cgitb import text
 from .workbench import Workbench
 from .dataset import Dataset
 from .asset import Asset
@@ -239,7 +240,75 @@ class WorkbenchMenu:
         self.wb.log("Tools MENU")
     
     def create_subfolder_menu(self):
-        self.wb.log("Create a Dataset MENU")
+        """Create a subfolder inside the current folder."""
+
+        # Get a name for the folder
+        folder_name = None
+
+        # The folder path will have spaces replaced with "_"
+        folder_path = None
+
+        # Make sure the folder does not collide
+        while folder_name is None or self.wb.filelib.exists(folder_path):
+
+            # Get the name
+            folder_name = self.questionary(
+                "text",
+                "Short name (2-5 words):"
+            )
+
+            # Construct the path
+            folder_path = folder_name.replace(" ", "_")
+
+            # If a folder like this exists
+            if self.wb.filelib.exists(folder_path):
+
+                # Tell the user
+                self.wb.log(f"Folder already exists ({folder_path})")
+
+        # Get a description
+        folder_desc = self.questionary(
+            "text",
+            "Description (can be added/edited later):"
+        )
+
+        # Ask the user to confirm their entry
+        if self.questionary(
+            "confirm",
+            f"Confirm - create folder '{folder_name}'?"
+        ):
+
+            # Create the folder
+            self.wb.log(f"Creating folder {folder_path}")
+            self.wb.filelib.mkdir_p(folder_path)
+
+            # Index it
+            ds = Dataset(folder_path)
+            ds.create_index()
+
+            # Set the name and description
+            self.wb.log(f"Adding name {folder_name}")
+            ds.set_attribute("name", folder_name)
+            self.wb.log(f"Adding description {folder_desc}")
+            ds.set_attribute("description", folder_desc)
+
+            # Update the indexed datasets
+            self.wb.log("Updating list of datasets")
+            self.wb.update_datasets()
+
+            # Move to the folder
+            self.change_directory(
+                self.wb.filelib.path_join(
+                    self.cwd,
+                    folder_path
+                )
+            )
+
+        else:
+            self.wb.log("Going back to main menu")
+
+        # Back to the main menu
+        self.main_menu()
 
     def run_tool_menu(self):
         """Run a tool in the current directory."""
@@ -627,11 +696,8 @@ class WorkbenchMenu:
         resp = self.questionary(
             "autocomplete",
             "Start typing the name of a dataset from the list above",
-            choices=self.wb.datasets.filtered_paths(sep=sep)
-            # # complete_style="MULTI_COLUMN",
-            # only_directories=True,
-            # validate=self.wb.datasets.passes_filter.get,
-            # file_filter=self.wb.datasets.passes_filter.get
+            choices=self.wb.datasets.filtered_paths(sep=sep),
+            complete_style="COLUMN"
         )
 
         # The path of the selected dataset is the final entry
@@ -916,7 +982,11 @@ class WorkbenchMenu:
     def exit(self):
         """Exit the interactive display."""
 
-        self.wb.log("Closing the BASH Workbench -- restart at any time with: wb")
+        self.wb.log(
+            "Closing the BASH Workbench -- restart at any time with: wb" + \
+                "\n" + \
+                    self.wb.filelib.navigate_text(self.cwd)
+        )
         sys.exit(0)
 
     def add_remove_filters(self):
@@ -998,7 +1068,7 @@ class WorkbenchMenu:
             value = self.questionary(
                 "text",
                 dict(
-                    name="Only show datasets with names that contain the string:",
+                    name="Only show datasets with names that contain the string (case sensitive):",
                     description="Only show datasets with descriptions that contain the string:",
                     tag="Only show datasets which have the tag (key=value):"
                 )[field]
