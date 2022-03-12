@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import textwrap
 
 
 def home():
@@ -124,3 +125,16 @@ def dirname(path):
     """Return the directory above a path."""
 
     return os.path.dirname(path)
+
+def navigate_text(path):
+    """
+    Advise the user how to manually inspect a directory.
+    This text will be displayed whenever the workbench exits.
+    """
+
+    return textwrap.dedent(
+        f"""
+        To navigate to the last used working folder, run the command:
+        cd {path}
+        """
+    )
