@@ -136,7 +136,7 @@ class Datasets:
         for ds_uuid in self.datasets:
 
             # Reset the filter
-            self._reset_filter_one(ds_uuid, field=field, value=value)
+            self._reset_filter_one(ds_uuid)
 
     def _get_filtered_uuids(self, incl_anc=True):
         """
