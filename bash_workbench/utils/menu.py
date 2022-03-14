@@ -154,6 +154,7 @@ class WorkbenchMenu:
                 ("Change Directory", self.change_directory_menu),
                 ("Run Tool", self.run_tool_menu),
                 ("Create Subfolder", self.create_subfolder_menu),
+                ("Edit Name/Description", self.edit_name_description),
                 ("More Options", self.more_options_menu),
                 ("Return to Home Directory", self.return_to_home),
                 ("Add/Remove Dataset Filters", self.add_remove_filters),
@@ -161,6 +162,26 @@ class WorkbenchMenu:
                 ("Return to Shell", self.exit)
             ]
         )
+
+    def edit_name_description(self):
+        """Edit the name and/or description for a dataset."""
+
+        # Read the dataset index
+        ds = Dataset(self.cwd)
+
+        # Prompt for the name and description
+        for k in ["name", "description"]:
+            ds.set_attribute(
+                k,
+                self.questionary(
+                    "text",
+                    f"Dataset {k.title()}",
+                    default=ds.index[k]
+                )
+            )
+
+        # Go back to the main menu
+        self.main_menu()
 
     def more_options_menu(self):
         """Show the 'More Options' menu"""
