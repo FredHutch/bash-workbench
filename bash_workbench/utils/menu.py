@@ -192,7 +192,8 @@ class WorkbenchMenu:
             [
                 ("Import Existing Dataset", self.import_folder),
                 ("Browse Tools", self.browse_tool_menu),
-                ("Manage Repositories", self.manage_repositories_menu)
+                ("Manage Repositories", self.manage_repositories_menu),
+                ("Back", self.main_menu)
             ]
         )
 
