@@ -34,6 +34,9 @@ class WorkbenchMenu:
         # Make sure that the function exists
         assert questionary_f is not None, f"No such questionary function: {fname}"
 
+        if fname == "select":
+            kwargs["use_shortcuts"] = True
+
         # Get the response
         resp = questionary_f(msg, **kwargs).ask()
 
