@@ -379,12 +379,12 @@ class WorkbenchMenu:
     def setup_tool_menu(self):
         """Set up a tool for a dataset."""
 
-        self._setup_asset_menu(self, "tool")
+        self._setup_asset_menu("tool")
 
     def setup_launcher_menu(self):
         """Set up a launcher for a dataset."""
 
-        self._setup_asset_menu(self, "launcher")
+        self._setup_asset_menu("launcher")
 
     def _setup_asset_menu(self, asset_type):
         """Set up an asset (tool or launcher)."""
@@ -451,8 +451,11 @@ class WorkbenchMenu:
 
         self.wb.log(f"Selected {asset_type} = {selected_asset}")
 
+        # Remove the description
+        selected_asset = selected_asset.split(": ", 1)[0]
+
         # Set up that asset in the folder
-        asset_dict[selected_asset].copy_to_dataset(ds)
+        asset_dict[selected_asset].copy_to_dataset(ds, overwrite=True)
 
         # Set the name of the asset
         ds.set_attribute(f"wb_{asset_type}", selected_asset)
@@ -502,6 +505,10 @@ class WorkbenchMenu:
 
         # Read in the params which are currently set up for the dataset, if any
         params = ds.read_asset_params(asset_type)
+
+        # Empty params should be set up as an empty dict
+        if params is None:
+            params = dict()
 
         # If there are any saved parameters
         if len(saved_params) > 0:
@@ -565,7 +572,7 @@ class WorkbenchMenu:
         # If there is a default value
         if default is not None:
 
-            self.log(f"Default: {default}")
+            self.wb.log(f"Default: {default}")
 
             # Ask the user if they want to provide a different value
             resp = self.questionary(
@@ -666,8 +673,6 @@ class WorkbenchMenu:
 
         # Prompt the user
         resp = self.__dict__[f"prompt_user_{arg.get('wb_type', 'unspecified')}"](arg)
-
-        self.catch_escape(resp)
         
         # Add to the list
         responses.append(resp)
