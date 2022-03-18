@@ -206,6 +206,15 @@ class Datasets:
 
         return datasets
 
+    def filtered_len(self, incl_anc=True):
+        """
+        Return the number of datasets which pass the filter.
+        By default, all datasets which contain those passing datasets will also
+        be included. That behavior can be stopped by setting `incl_anc=False`
+        """
+
+        return len(self._get_filtered_uuids(incl_anc=incl_anc))
+
     def filtered_paths(self, sep=" : "):
         """
         Return a list of filtered datasets in the format:

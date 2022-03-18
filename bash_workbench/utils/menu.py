@@ -1031,6 +1031,11 @@ class WorkbenchMenu:
         for filter_item in self.wb.datasets.filters:
             self.wb.log(f"Dataset display filter: {filter_item}")
 
+        # Print:
+        #   The number of datasets which pass these filters
+        print(f"Total datasets: {len(self.wb.datasets.datasets):,}")
+        print(f"Filtered datasets: {self.wb.datasets.filtered_len():,}")
+
         # Make a list of options
         options = [("Add filter", self.add_filter)]
 
