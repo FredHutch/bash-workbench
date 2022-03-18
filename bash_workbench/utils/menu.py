@@ -123,6 +123,9 @@ class WorkbenchMenu:
     def main_menu(self):
         """Show the main menu"""
 
+        # Print a header
+        self.print_header("BASH Workbench")
+
         # Check to see if the cwd if indexed
         #   If not, ask if the user wants to index the folder,
         #   move to the root folder, or quit
@@ -162,6 +165,18 @@ class WorkbenchMenu:
                 ("Return to Shell", self.exit)
             ]
         )
+
+    def print_header(self, text, border_char="#"):
+        """Print text with a border."""
+
+        assert isinstance(border_char, str)
+        assert len(border_char) == 1
+
+        print("")
+        print("".join(border_char for _ in range(len(text) + 4)))
+        print(" ".join([border_char, text, border_char]))
+        print("".join(border_char for _ in range(len(text) + 4)))
+        print("")
 
     def edit_name_description(self):
         """Edit the name and/or description for a dataset."""
