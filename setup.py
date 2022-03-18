@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from distutils.core import setup
+import bash_workbench
 
 # Read the requirements from requirements.txt
 with open("requirements.txt", "rt") as handle:
@@ -11,7 +12,7 @@ with open("requirements.txt", "rt") as handle:
 
 setup(
     name="bash_workbench",
-    version="0.0.1",
+    version=bash_workbench.__version__,
     description="Dataset manager for more reproducible analysis with shell scripts",
     author="Samuel Minot",
     author_email="sminot@fredhutch.org",
