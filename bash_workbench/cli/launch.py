@@ -5,6 +5,7 @@ import argcomplete
 import bash_workbench as wb
 import json
 import yaml
+import os
 
 def cli():
     
@@ -17,10 +18,12 @@ def cli():
     # Parse the arguments
     args = parser.parse_args()
 
-    # Get a logger which writes to standard out
+    # Get a logger
+    # If the user specified a function, output to the screen
+    # Either way, append to a log file in the base folder
     logger = wb.utils.logging.setup_logger(
-        log_stdout=True,   # Print to standard out
-        log_fp=None,       # Do not write to a file
+        log_stdout="func" in args.__dict__,
+        log_fp=os.path.join(args.base_folder, ".wb_log"),
     )
 
     # Set up a Workbench object

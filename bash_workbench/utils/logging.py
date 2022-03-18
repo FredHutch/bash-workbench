@@ -8,7 +8,7 @@ def setup_logger(
     """
     Set up and return a logging instance.
     Logs will be printed to standard out by default (with log_stdout=True).
-    If `log_fp` is provided, logs will also be written to that file.
+    If `log_fp` is provided, logs will also be appended to that file.
     """
 
     assert log_stdout or log_fp is not None, "Must log to either a file or STDOUT"
@@ -20,8 +20,8 @@ def setup_logger(
 
     # If a file was provided
     if log_fp is not None:
-        # Write to file
-        fileHandler = logging.FileHandler(log_fp)
+        # Append to file
+        fileHandler = logging.FileHandler(log_fp, mode="a")
         fileHandler.setFormatter(logFormatter)
         logger.addHandler(fileHandler)
 
