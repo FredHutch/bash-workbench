@@ -54,6 +54,7 @@ class WorkbenchMenu:
 
         # Add a spacer line before asking the question
         print("")
+
         # Get the response
         resp = questionary_f(msg, **kwargs).ask()
 
@@ -264,7 +265,7 @@ class WorkbenchMenu:
         """Change the working directory and return to the main menu."""
 
         # Change the working directory
-        self.wb.log(f"Navigating to {path}")
+        self.print_line(f"Navigating to {path}")
         self.cwd = path
         self.wb.filelib.chdir(path)
 
@@ -307,18 +308,21 @@ class WorkbenchMenu:
                 )
 
         if len(files) + len(folders) == 0:
-            self.wb.log(f"No files or folders found in {self.cwd}")
+            self.print_line(f"No files or folders found in {self.cwd}")
 
         else:
 
-            self.wb.log(f"Files/folders in {self.cwd}:")
+            self.print_line(f"Files/folders in {self.cwd}:")
             for folder_str in folders:
-                self.wb.log(folder_str)
+                self.print_line(folder_str)
             for file_str in files:
-                self.wb.log(file_str)
+                self.print_line(file_str)
+
+        # Back to the main menu
+        self.main_menu()
 
     def browse_tool_menu(self):
-        self.wb.log("Tools MENU")
+        self.print_line("Tools MENU")
     
     def create_subfolder_menu(self):
         """Create a subfolder inside the current folder."""
@@ -345,7 +349,7 @@ class WorkbenchMenu:
             if self.wb.filelib.exists(folder_path):
 
                 # Tell the user
-                self.wb.log(f"Folder already exists ({folder_path})")
+                self.print_line(f"Folder already exists ({folder_path})")
 
         # Get a description
         folder_desc = self.questionary(
@@ -360,7 +364,7 @@ class WorkbenchMenu:
         ):
 
             # Create the folder
-            self.wb.log(f"Creating folder {folder_path}")
+            self.print_line(f"Creating folder {folder_path}")
             self.wb.filelib.mkdir_p(folder_path)
 
             # Index it
@@ -368,13 +372,13 @@ class WorkbenchMenu:
             ds.create_index()
 
             # Set the name and description
-            self.wb.log(f"Adding name {folder_name}")
+            self.print_line(f"Adding name {folder_name}")
             ds.set_attribute("name", folder_name)
-            self.wb.log(f"Adding description {folder_desc}")
+            self.print_line(f"Adding description {folder_desc}")
             ds.set_attribute("description", folder_desc)
 
             # Update the indexed datasets
-            self.wb.log("Updating list of datasets")
+            self.print_line("Updating list of datasets")
             self.wb.update_datasets()
 
             # Move to the folder
@@ -386,7 +390,7 @@ class WorkbenchMenu:
             )
 
         else:
-            self.wb.log("Going back to main menu")
+            self.print_line("Going back to main menu")
 
         # Back to the main menu
         self.main_menu()
@@ -477,7 +481,7 @@ class WorkbenchMenu:
             if response == f"Choose new {asset_type}":
 
                 # Delete the previous {asset_type}
-                self.wb.log(f"Deleting previous {asset_type} in {self.cwd}")
+                self.print_line(f"Deleting previous {asset_type} in {self.cwd}")
                 ds.delete_asset_folder(asset_type)
 
             # If the user wants to return to the main menu
@@ -505,7 +509,7 @@ class WorkbenchMenu:
             choices=choices
         )
 
-        self.wb.log(f"Selected {asset_type} = {selected_asset}")
+        self.print_line(f"Selected {asset_type} = {selected_asset}")
 
         # Remove the description
         selected_asset = selected_asset.split(": ", 1)[0]
@@ -550,7 +554,7 @@ class WorkbenchMenu:
         if len(asset_config["args"]) == 0:
 
             # Then we can exit from this particular menu
-            self.wb.log(f"No parameters required for {asset_type} {asset_name}")
+            self.print_line(f"No parameters required for {asset_type} {asset_name}")
             return
 
         # See if there are any saved parameters available
@@ -628,7 +632,7 @@ class WorkbenchMenu:
         # If there is a default value
         if default is not None:
 
-            self.wb.log(f"Default: {default}")
+            self.print_line(f"Default: {default}")
 
             # Ask the user if they want to provide a different value
             resp = self.questionary(
@@ -645,7 +649,7 @@ class WorkbenchMenu:
 
                 # Return the default value
                 if default is not None:
-                    self.wb.log(f"Using default value: {default}")
+                    self.print_line(f"Using default value: {default}")
                 return default
 
         # If the argument is not required
@@ -789,7 +793,7 @@ class WorkbenchMenu:
         # The path of the selected dataset is the final entry
         path = resp.rsplit(sep, 1)[-1]
 
-        self.wb.log(f"Moving to dataset {path}")
+        self.print_line(f"Moving to dataset {path}")
 
         # Move to that directory
         self.change_directory(
@@ -815,7 +819,7 @@ class WorkbenchMenu:
         try:
             self.wb.index_folder(folder_to_import)
         except Exception as e:
-            self.wb.log(
+            self.print_line(
                 f"Folder could not be added: {str(e)}"
             )
             # Back to the main menu
@@ -823,7 +827,7 @@ class WorkbenchMenu:
             return
 
         # Report success
-        self.wb.log(f"Imported folder {folder_to_import}")
+        self.print_line(f"Imported folder {folder_to_import}")
 
         # Back to the main menu
         self.main_menu()
@@ -886,7 +890,7 @@ class WorkbenchMenu:
         try:
             self.wb.add_repo(repo_name)
         except Exception as e:
-            self.wb.log(f"ERROR: {str(e)}")
+            self.print_line(f"ERROR: {str(e)}")
 
         # Back to the repository menu
         self.manage_repositories_menu()
@@ -914,7 +918,7 @@ class WorkbenchMenu:
         try:
             self.wb.link_local_repo(repo_fp, repo_fp.rstrip("/").rsplit("/", 1)[-1])
         except Exception as e:
-            self.wb.log(f"ERROR: {str(e)}")
+            self.print_line(f"ERROR: {str(e)}")
 
         # Back to the repository menu
         self.manage_repositories_menu()
@@ -969,7 +973,7 @@ class WorkbenchMenu:
         try:
             self.wb.unlink_local_repo(name=repo_name)
         except Exception as e:
-            self.wb.log(f"ERROR: {str(e)}")
+            self.print_line(f"ERROR: {str(e)}")
 
         # Go back to the repository menu
         self.manage_repositories_menu()
@@ -990,7 +994,7 @@ class WorkbenchMenu:
         try:
             self.wb.update_repo(name=repo_name)
         except Exception as e:
-            self.wb.log(f"ERROR: {str(e)}")
+            self.print_line(f"ERROR: {str(e)}")
 
         # Go back to the repository menu
         self.manage_repositories_menu()
@@ -1011,7 +1015,7 @@ class WorkbenchMenu:
         try:
             self.wb.delete_repo(name=repo_name)
         except Exception as e:
-            self.wb.log(f"ERROR: {str(e)}")
+            self.print_line(f"ERROR: {str(e)}")
 
         # Go back to the repository menu
         self.manage_repositories_menu()
@@ -1035,7 +1039,7 @@ class WorkbenchMenu:
         try:
             self.wb.switch_branch(name=repo_name, branch=branch_name)
         except Exception as e:
-            self.wb.log(f"ERROR: {str(e)}")
+            self.print_line(f"ERROR: {str(e)}")
 
         # Go back to the repository menu
         self.manage_repositories_menu()
@@ -1049,7 +1053,7 @@ class WorkbenchMenu:
         # Show the user the index information
         for key, val in ix.items():
 
-            self.wb.log(f"{key}: {val}")
+            self.print_line(f"{key}: {val}")
 
     def browse_home(self):
         """Navigate to the top-level home directory."""
@@ -1057,7 +1061,7 @@ class WorkbenchMenu:
         # Directory containing all datasets
         data_dir = self.wb._top_level_folder("data")
 
-        self.wb.log(f"Changing working directory to {data_dir}")
+        self.print_line(f"Changing working directory to {data_dir}")
 
         # Change the working directory
         self.cwd = data_dir
@@ -1068,7 +1072,7 @@ class WorkbenchMenu:
     def exit(self):
         """Exit the interactive display."""
 
-        self.wb.log(
+        self.print_line(
             "Closing the BASH Workbench -- restart at any time with: wb" + \
                 "\n" + \
                     self.wb.filelib.navigate_text(self.cwd)
@@ -1137,7 +1141,7 @@ class WorkbenchMenu:
 
             [field, value] = resp.split(": ", 1)
 
-            self.wb.log(f"Removing filter {resp}")
+            self.print_line(f"Removing filter {resp}")
             self.wb.datasets.remove_filter(field=field, value=value)
 
         # Go back to the previous menu
@@ -1164,7 +1168,7 @@ class WorkbenchMenu:
 
             # If the user selected a tag and they did not provide the format "key=value"
             if value is not None:
-                self.wb.log("To filter by tag, you must use the format: key=value")
+                self.print_line("To filter by tag, you must use the format: key=value")
 
             # Get the filter value
             value = self.questionary(
