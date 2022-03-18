@@ -7,6 +7,7 @@ from .utils import convert_size
 import questionary
 import sys
 import textwrap
+import bash_workbench
 
 class WorkbenchMenu:
 
@@ -25,8 +26,19 @@ class WorkbenchMenu:
         # Set the current working directory
         self.cwd = self.wb.filelib.getcwd()
 
+        # Report the version of all software used
+        self.print_versions()
+
         # Start at the main manu
         self.main_menu()
+
+    def print_versions(self):
+        """Print the versions of all packages used."""
+        self.wb.log("Python version:")
+        for l in sys.version.split("\n"):
+            self.wb.log(l)
+        self.wb.log(sys.version_info)
+        self.wb.log(f"BASH Workbench: {bash_workbench.__version__}")
 
     def questionary(self, fname, msg, **kwargs):
         """Wrap questionary functions to catch escapes and exit gracefully."""
