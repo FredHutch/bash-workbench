@@ -16,6 +16,9 @@ class WorkbenchMenu:
         # Attach the workbench which has been provided
         self.wb = WB
 
+        # Define a spacer which will indent text
+        self.spacer = "    "
+
         # Parse all of the datasets available from the home directory
         self.wb.update_datasets()
 
@@ -135,19 +138,33 @@ class WorkbenchMenu:
         #   Dataset tree beneath the cwd
         print(self.wb.datasets.format_dataset_tree())
 
-        # Print:
-        #   Any filters which have been applied
-        for filter_item in self.wb.datasets.filters:
-            self.wb.log(f"Dataset display filter: {filter_item}")
+        # Print the number of datasets and any filters which have been applied
+        self.print_filters()
 
         # If this is not the home directory
         if self.cwd != self.wb.home_folder:
 
-            # Print:
-            #   Name, description, tags of cwd
+            # Get the dataset information
             ds = Dataset(self.cwd)
+
+            # Show the name as a header
+            self.print_header(f"Dataset: {ds.index.get('name', self.cwd)}")
+
+            # Print:
+            #   description, tags of cwd, etc.
             for key, val in ds.index.items():
-                self.wb.log(f"{key}: {val}")
+                if key != "name":
+                    self.print_line(f"{key}: {val}", indent=1)
+
+            # Print the directory
+            self.print_line(f"path: {self.cwd}", indent=1)
+
+        else:
+
+            self.print_header("Home")
+
+        # Add a spacer line
+        print("\n")
 
         # Select a submenu
         # The user selection will run a function
@@ -165,6 +182,16 @@ class WorkbenchMenu:
                 ("Return to Shell", self.exit)
             ]
         )
+
+    def print_line(self, text, indent=0, leader="- "):
+        """Print a single line, with optional indentation and leader."""
+
+        assert isinstance(indent, int)
+        assert indent >= 0
+
+        assert isinstance(leader, str)
+
+        print("".join([self.spacer for i in range(indent)] + [leader, text]))
 
     def print_header(self, text, border_char="#"):
         """Print text with a border."""
@@ -532,7 +559,7 @@ class WorkbenchMenu:
             decline_response = "No thank you"
             selection = self.questionary(
                 "select",
-                "Would you like to load a set of saved parameters?",
+                "Would you like to load a set of previously-saved parameters?",
                 choices=[decline_response] + saved_params
             )
 
@@ -1034,6 +1061,24 @@ class WorkbenchMenu:
         )
         sys.exit(0)
 
+    def print_filters(self):
+        """Print the number of datasets and any filters which have been applied."""
+
+        self.print_line(f"Total datasets: {len(self.wb.datasets.datasets):,}")
+
+        # Print:
+        #   Any filters which have been applied
+        if len(self.wb.datasets.filters) > 0:
+
+            self.print_header("Dataset Filters")
+
+            for filter_item in self.wb.datasets.filters:
+                self.print_line(": ".join(filter_item), indent=1)
+
+            # Print:
+            #   The number of datasets which pass these filters
+            print(f"Filtered datasets: {self.wb.datasets.filtered_len():,}")
+
     def add_remove_filters(self):
         """Menu to add or remove filters to the set of displayed datasets."""
 
@@ -1041,15 +1086,8 @@ class WorkbenchMenu:
         #   Dataset tree beneath the cwd
         print(self.wb.datasets.format_dataset_tree())
 
-        # Print:
-        #   Any filters which have been applied
-        for filter_item in self.wb.datasets.filters:
-            self.wb.log(f"Dataset display filter: {filter_item}")
-
-        # Print:
-        #   The number of datasets which pass these filters
-        print(f"Total datasets: {len(self.wb.datasets.datasets):,}")
-        print(f"Filtered datasets: {self.wb.datasets.filtered_len():,}")
+        # Print the number of datasets and any filters which have been applied
+        self.print_filters()
 
         # Make a list of options
         options = [("Add filter", self.add_filter)]
