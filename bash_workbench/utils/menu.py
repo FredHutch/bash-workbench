@@ -52,6 +52,8 @@ class WorkbenchMenu:
         if fname == "select":
             kwargs["use_shortcuts"] = True
 
+        # Add a spacer line before asking the question
+        print("")
         # Get the response
         resp = questionary_f(msg, **kwargs).ask()
 
