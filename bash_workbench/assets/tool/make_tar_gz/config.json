@@ -11,8 +11,9 @@
         "target": {
             "help": "Directory targeted for compression (all subfolders will be included recursively).",
             "wb_env": "TARGET",
+            "wb_sep": " ",
             "wb_type": "folder",
-            "nargs": 1,
+            "nargs": "+",
             "required": true
         }
     }
