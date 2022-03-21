@@ -4,6 +4,7 @@ from .workbench import Workbench
 from .dataset import Dataset
 from .asset import Asset
 from .utils import convert_size
+from .params_menu import ParamsMenu
 import questionary
 import sys
 import textwrap
@@ -157,7 +158,7 @@ class WorkbenchMenu:
         self.print_filters()
 
         # If this is not the home directory
-        if self.cwd != self.wb.home_folder:
+        if self.cwd != self.wb._top_level_folder("data"):
 
             # Get the dataset information
             ds = Dataset(self.cwd)
@@ -186,8 +187,8 @@ class WorkbenchMenu:
         self.select_func(
             """Would you like to:""",
             [
-                ("Change Directory", self.change_directory_menu),
                 ("Run Tool", self.run_tool_menu),
+                ("Change Directory", self.change_directory_menu),
                 ("Create Subfolder", self.create_subfolder_menu),
                 ("Edit Name/Description", self.edit_name_description),
                 ("More Options", self.more_options_menu),
@@ -318,12 +319,41 @@ class WorkbenchMenu:
             for file_str in files:
                 self.print_line(file_str)
 
-        # Back to the main menu
-        self.main_menu()
+        # Back to the main menu after the user hits enter
+        self.select_func(
+            "Next",
+            [
+                ("Back to the main menu", self.main_menu)
+            ]
+        )
 
     def browse_tool_menu(self):
-        self.print_line("Tools MENU")
-    
+        """Show the user the set of tools which are available."""
+
+        self._browse_asset_menu("tool")
+
+    def browse_launcher_menu(self):
+        """Show the user the set of launchers which are available."""
+
+        self._browse_asset_menu("launcher")
+
+    def _browse_asset_menu(self, asset_type):
+        """Show the user the set of assets which are available."""
+
+        # Make a list of the assets of this type which are available
+        asset_dict = {
+            asset_name: Asset(WB=self.wb, asset_type=asset_type, asset_name=asset_name)
+            for asset_name in self.wb._list_assets(asset_type)
+        }
+
+        # Format a list of strings using the key, name, and description
+        choices = [
+            f"{asset_name}: {asset.config['name']}\n{asset.config['description']}"
+            for asset_name, asset in asset_dict.items()
+        ]
+
+        # Sort the list alphabetically
+
     def create_subfolder_menu(self):
         """Create a subfolder inside the current folder."""
 
@@ -465,30 +495,40 @@ class WorkbenchMenu:
             msg = f"Asset '{asset_type}' is not configured correctly for {self.cwd}"
             assert asset_config.get("name") is not None, msg
 
+            # Get the asset name
+            asset_name = asset_config.get('name')
+
             # Ask the user if they want to replace this asset
             # or keep it
-            response = self.questionary(
-                "select",
-                f"Previously selected {asset_type}: {asset_config.get('name')}",
-                choices=[
-                    f"Run previously selected {asset_type}",
-                    f"Choose new {asset_type}",
-                    "Return to main menu"
+            self.select_func(
+                f"Previously selected {asset_type}: {asset_name}",
+                [
+                    (
+                        f"Run previously selected {asset_type}",
+                        lambda: self.print_line(f"Running {asset_type} {asset_name}")
+                    ),
+                    (
+                        f"Choose new {asset_type}",
+                        lambda: self._choose_asset(asset_type)
+                    ),
+                    ("Return to main menu", self.main_menu)
                 ]
             )
 
-            # If the user wants to choose a new {asset_type}
-            if response == f"Choose new {asset_type}":
+        # If no asset has been set up yet
+        else:
 
-                # Delete the previous {asset_type}
-                self.print_line(f"Deleting previous {asset_type} in {self.cwd}")
-                ds.delete_asset_folder(asset_type)
+            # Drop right into the menu choosing an asset
+            self._choose_asset(asset_type)
 
-            # If the user wants to return to the main menu
-            elif response == "Return to main menu":
+    def _choose_asset(self, asset_type):
+        """Select an asset and set it up for a dataset."""
 
-                # Go Return to the main menu
-                self.main_menu()
+        # Make a Dataset object
+        ds = Dataset(self.cwd)
+
+        # Make sure that the asset type is valid
+        ds.validate_asset_type_format(asset_type)
 
         # Make a list of the assets of this type which are available
         asset_dict = {
@@ -502,6 +542,9 @@ class WorkbenchMenu:
             for asset_name, asset in asset_dict.items()
         ]
 
+        # Also give the user an opportunity to bail
+        choices = choices + ["Back to main menu"]
+
         # At this point, the user must select an {asset_type} to run
         selected_asset = self.questionary(
             "select",
@@ -509,16 +552,31 @@ class WorkbenchMenu:
             choices=choices
         )
 
-        self.print_line(f"Selected {asset_type} = {selected_asset}")
+        # If the user bailed
+        if selected_asset == "Back to main menu":
 
-        # Remove the description
-        selected_asset = selected_asset.split(": ", 1)[0]
+            # Go back to the main menu
+            self.main_menu()
 
-        # Set up that asset in the folder
-        asset_dict[selected_asset].copy_to_dataset(ds, overwrite=True)
+        # Otherwise
+        else:
 
-        # Set the name of the asset
-        ds.set_attribute(f"wb_{asset_type}", selected_asset)
+            # If the asset has already been set up
+            if ds.__dict__.get(asset_type) is not None:
+
+                # Delete the previously set-up asset
+                ds.delete_asset_folder(asset_type)
+
+            self.print_line(f"Selected {asset_type} = {selected_asset}")
+
+            # Remove the description
+            selected_asset = selected_asset.split(": ", 1)[0]
+
+            # Set up that asset in the folder
+            asset_dict[selected_asset].copy_to_dataset(ds, overwrite=True)
+
+            # Set the name of the asset
+            ds.set_attribute(asset_type, selected_asset)
 
     def dataset_tool_params_menu(self):
         """Populate the params for a tool in a dataset."""
@@ -537,11 +595,16 @@ class WorkbenchMenu:
         ds = Dataset(self.cwd)
 
         # Get the name of the tool/launcher which has been set up
-        asset_name = ds.index.get(f"wb_{asset_type}")
+        asset_name = ds.index.get(asset_type)
 
-        # An must have been set up
-        msg = f"No {asset_type} has been set up for {self.cwd}"
-        assert asset_name is not None, msg
+        # If an asset has not been set up
+        if asset_name is None:
+
+            # Choose one
+            self.print_line(f"No {asset_name} has been set up yet")
+            self._choose_asset(asset_type)
+        
+        # If an asset has been set up
 
         # Get the configuration for this asset
         asset_config = Asset(
@@ -553,7 +616,7 @@ class WorkbenchMenu:
         # If there are no arguments which need to be set up
         if len(asset_config["args"]) == 0:
 
-            # Then we can exit from this particular menu
+            # Then we can go ahead 
             self.print_line(f"No parameters required for {asset_type} {asset_name}")
             return
 
@@ -591,201 +654,40 @@ class WorkbenchMenu:
                     params_name=selection
                 )
 
-        # For each of the arguments, prompt the user for input,
-        # using the default value of either:
-        # 1) the saved params, if present, or
-        # 2) the default value from the asset configuration
-        for arg_key, arg_value in asset_config["args"].items():
-
-            # Add the key to the params
-            arg_value["key"] = arg_key
-
-            # Get the response from the user
-            resp = self.prompt_argument(
-                arg_value,
-                default=params.get(arg_key)
-            )
-
-            # If a value was provided
-            if resp is not None:
-
-                # Populate the dict with the response from the user
-                params[arg_key] = resp
-
-        # Save the parameters for the asset
-        self.wb._set_asset_params(
-            self.cwd,
-            asset_type,
-            overwrite=True,
-            **params
+        # Create an interactive menu to manipulate this set of parameters
+        params_menu = ParamsMenu(
+            config=asset_config["args"],
+            params=params,
+            menu=self
         )
 
-    def prompt_argument(self, arg, default=None):
-        """Prompt the user for the value of an argument."""
+        # Prompt the user to modify the parameters as needed
+        params_menu.prompt()
 
-        # If no default value was provided
-        if default is None:
+        # If the user approved the parameters
+        if params_menu.approved:
 
-            # Use the default value in the argument configuration, if any
-            default = arg.get("default")
-
-        # If there is a default value
-        if default is not None:
-
-            self.print_line(f"Default: {default}")
-
-            # Ask the user if they want to provide a different value
-            resp = self.questionary(
-                "select",
-                self.argument_header(
-                    arg,
-                    "Would you like to provide a different value?"
-                ),
-                choices=["Yes", "No"]
+            # Save the parameters for the asset
+            self.wb._set_asset_params(
+                self.cwd,
+                asset_type,
+                overwrite=True,
+                **params_menu.params
             )
 
-            # If the answer is No
-            if resp == "No":
-
-                # Return the default value
-                if default is not None:
-                    self.print_line(f"Using default value: {default}")
-                return default
-
-        # If the argument is not required
-        if (arg.get("required", False) is False) and (arg.get("nargs") not in ["?", "*"]):
-
-            # Ask the user if they want to provide any value at all
-            resp = self.questionary(
-                "select",
-                self.argument_header(
-                    arg,
-                    "Would you like to provide a value for this optional argument?"
-                ),
-                choices=["Yes", "No"]
-            )
-
-            # If the answer is No
-            if resp == "No":
-
-                # Return None
-                return
-
-        # By default, request a single value
-        min_n = 1
-        max_n = 1
-
-        # If `nargs` is specified, parse the min_n and max_n implied
-        if arg.get("nargs") is not None:
-
-            # Get the value for `nargs`
-            nargs = arg.get("nargs")
-
-            # The allowable values are positive integers, '?', '*', or '+'
-            if isinstance(nargs, int):
-
-                # Set the number
-                min_n = nargs
-                max_n = nargs
-
-            elif nargs in ["*", "+"]:
-
-                # There is no maximum number of arguments
-                max_n = None
-
-            else:
-
-                assert nargs in ["?"], f"nargs must be int, ?, +, or * (not {nargs})"
-
-        # Populate a list of responses
-        responses = list()
-
-        # Set a boolean flag which will be used to trigger adding more responses
-        add_more = True
-
-        while add_more:
-
-            # Add a response and prompt the user to see if they want to add another
-            add_more = self.add_argument_response(responses, arg, min_n, max_n)
-
-        # If there are no responses
-        if len(responses) == 0:
-
-            return None
-
-        # If there is a single response
-        elif len(responses) == 1:
-
-            # Return the item
-            return responses[0]
-
-        # If there is more than one
+        # Otherwise
         else:
 
-            # Return a list
-            return responses
+            # Return to the main menu
+            self.main_menu()
 
-    def add_argument_response(self, responses, arg, min_n, max_n):
-        """Prompt the user for a single response to an argument."""
-
-        # Print the header
-        self.argument_header(arg, "Provide value")
-
-        # Prompt the user
-        resp = self.__dict__[f"prompt_user_{arg.get('wb_type', 'unspecified')}"](arg)
-        
-        # Add to the list
-        responses.append(resp)
-
-    def prompt_user_string(self, arg):
-        """Function called for arguments with wb_type == 'string'."""
-
-        return self.questionary("text", "string:")
-
-    def prompt_user_password(self, arg):
-        """Function called for arguments with wb_type == 'password'."""
-
-        return self.questionary("password", "password:")
-
-    def prompt_user_folder(self, arg):
-        """Function called for arguments with wb_type == 'folder'."""
-
-        return self.questionary("path", "folder:", only_directories=True)
-
-    def prompt_user_file(self, arg):
-        """Function called for arguments with wb_type == 'file'."""
-
-        return self.questionary("path", "file:")
-
-    def prompt_user_select(self, arg):
-        """Function called for arguments with wb_type == 'select'."""
-
-        choices = arg.get("wb_choices")
-        msg = "Must provide `wb_choices` for arguments where `wb_type` == 'select'"
-        assert choices is not None, msg
-
-        return self.questionary("select", "select:", choices=choices)
-
-    def prompt_user_unspecified(self, arg):
-        """Function called if `wb_type` is not specified for an argument."""
-
-        raise Exception(f"Must specify `wb_type` for all arguments (see {arg['key']})")
-
-    def argument_header(self, arg, msg):
-        """Format a descriptive header for a single argument."""
-
-        return textwrap.dedent(f"""
-        Field: {arg['key']}
-        {arg['help']}
-        {msg}""")
-    
     def change_directory_menu(self, sep=" : "):
         """Select an indexed directory and navigate to it."""
 
         # Get a path which passes the current filter
         resp = self.questionary(
             "autocomplete",
-            "Start typing the name of a dataset from the list above",
+            "Start typing the name of a dataset, or press tab to see a list of options",
             choices=self.wb.datasets.filtered_paths(sep=sep),
             complete_style="COLUMN"
         )
