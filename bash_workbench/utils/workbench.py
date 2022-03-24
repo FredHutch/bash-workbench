@@ -653,9 +653,6 @@ class Workbench:
         tool.copy_to_dataset(ds, overwrite=overwrite)
         launcher.copy_to_dataset(ds, overwrite=overwrite)
 
-        # Copy all of the helpers to the dataset
-        self._copy_helpers_to_dataset(path, overwrite=overwrite)
-
         # Record the time at which the scripts were set up
         self.log("Recording tool and launcher in dataset index")
         ds.set_attribute("setup_at", self.timestamp.encode())
@@ -903,6 +900,9 @@ class Workbench:
 
     def run_dataset(self, path=None):
         """Launch the tool which has been configured in a dataset."""
+
+        # Copy all of the helpers to the dataset
+        self._copy_helpers_to_dataset(path, overwrite=True)
 
         # Instantiate the dataset object
         ds = Dataset(path)

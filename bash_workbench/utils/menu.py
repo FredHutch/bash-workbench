@@ -457,11 +457,8 @@ class WorkbenchMenu:
         # If they want to run the dataset now
         if response == "Run now":
 
-            # Make a Dataset object
-            ds = Dataset(self.cwd)
-
             # Run the dataset
-            ds.run()
+            self.wb.run_dataset(path=self.cwd)
 
         # Return to the main menu
         self.main_menu()
@@ -616,7 +613,13 @@ class WorkbenchMenu:
         # If there are no arguments which need to be set up
         if len(asset_config["args"]) == 0:
 
-            # Then we can go ahead 
+            # Then we will write an empty JSON in params.json
+            self.wb._set_asset_params(
+                self.cwd,
+                asset_type,
+                overwrite=True
+            )
+
             self.print_line(f"No parameters required for {asset_type} {asset_name}")
             return
 
