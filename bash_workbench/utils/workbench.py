@@ -45,18 +45,18 @@ class Workbench:
         # The home folder for the workbench is <base_folder>/<profile>/
         self.home_folder = self.filelib.path_join(base_folder, profile)
 
-        # If the root folder does not exist
-        if not self.filelib.exists(self.home_folder):
+        # If the data folder does not exist
+        if not self.filelib.exists(self._top_level_folder("data")):
 
             # Create it
-            self.filelib.makedirs(self.home_folder)
-            self.log(f"Created {self.home_folder}")
+            self.filelib.makedirs(self._top_level_folder("data"))
+            self.log(f"Created {self._top_level_folder('data')}")
         
         else:
 
-            self.log(f"Exists {self.home_folder}")
+            self.log(f"Exists {self._top_level_folder('data')}")
 
-        # Resolve the absolute path
+        # Resolve the absolute path to the home folder
         self.home_folder = self.filelib.abs_path(self.home_folder)
 
         # Get the folder which contains assets installed with this package
@@ -946,6 +946,12 @@ class Workbench:
         # Point to the base folder in which all repositories are saved
         repo_home = self._top_level_folder("repositories")
 
+        # If the folder does not exist
+        if not self.filelib.exists(repo_home):
+
+            # Create it
+            self.filelib.makedirs(repo_home)
+
         # Iterate over each of the folders in "repositories/"
         for org_folder in self.filelib.listdir(repo_home):
 
@@ -974,9 +980,16 @@ class Workbench:
     def list_linked_repos(self):
         """Return a list of the local repositories which have been linked."""
 
-        return self.filelib.listdir(
-            self._top_level_folder("linked_repositories")
-        )
+        # Point to the base folder in which all repositories are saved
+        repo_home = self._top_level_folder("linked_repositories")
+
+        # If the folder does not exist
+        if not self.filelib.exists(repo_home):
+
+            # Create it
+            self.filelib.makedirs(repo_home)
+
+        return self.filelib.listdir(repo_home)
 
     def link_local_repo(self, path=None, name=None):
         """Link a local repository (containing a ._wb/ directory of tools and/or launchers)."""
@@ -1048,4 +1061,4 @@ class Workbench:
         """Check that a name contains only alphanumeric and underscores."""
 
         assert isinstance(name, str), "Input to `is_simple_name` must be a string"
-        return name.replace("_", "").isalnum()
+        return name.replace("_", "").replace("-", "").isalnum()

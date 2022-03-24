@@ -18,6 +18,12 @@ def cli():
     # Parse the arguments
     args = parser.parse_args()
 
+    # If the base folder does not exist
+    if not os.path.exists(args.base_folder):
+
+        # Create it
+        os.makedev(args.base_folder)
+
     # Get a logger
     # If the user specified a function, output to the screen
     # Either way, append to a log file in the base folder

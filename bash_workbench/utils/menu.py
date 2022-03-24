@@ -831,7 +831,10 @@ class WorkbenchMenu:
 
         # Try to link it
         try:
-            self.wb.link_local_repo(repo_fp, repo_fp.rstrip("/").rsplit("/", 1)[-1])
+            self.wb.link_local_repo(
+                path=repo_fp,
+                name=repo_fp.rstrip("/").rsplit("/", 1)[-1]
+            )
         except Exception as e:
             self.print_line(f"ERROR: {str(e)}")
 
@@ -866,7 +869,7 @@ class WorkbenchMenu:
         # Ask the user what to do
         self.select_func(
             f"Linked repository: {repo_name} -> {linked_path}",
-            choices=[
+            [
                 ("Remove link", lambda: self.unlink_repo(repo_name)),
                 ("Back", self.manage_repositories_menu)
             ]
