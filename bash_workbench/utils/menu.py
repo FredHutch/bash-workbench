@@ -150,13 +150,6 @@ class WorkbenchMenu:
         #   move to the root folder, or quit
         self.check_indexed_cwd()
 
-        # Print:
-        #   Dataset tree beneath the cwd
-        print(self.wb.datasets.format_dataset_tree())
-
-        # Print the number of datasets and any filters which have been applied
-        self.print_filters()
-
         # If this is not the home directory
         if self.cwd != self.wb._top_level_folder("data"):
 
@@ -188,14 +181,52 @@ class WorkbenchMenu:
             """Would you like to:""",
             [
                 ("Run Tool", self.run_tool_menu),
-                ("Change Directory", self.change_directory_menu),
+                ("Edit Dataset", self.modify_dataset_menu),
+                ("Explore Datasets", self.explore_datasets_menu),
+                ("Browse Tools", self.browse_tool_menu),
+                ("Manage Repositories", self.manage_repositories_menu),
+                ("Return to Shell", self.exit)
+            ]
+        )
+
+    def modify_dataset_menu(self):
+        """Menu options for modifying the current working directory."""
+        
+        self.select_func(
+            """Would you like to:""",
+            [
                 ("Create Subfolder", self.create_subfolder_menu),
                 ("Edit Name/Description", self.edit_name_description),
-                ("More Options", self.more_options_menu),
-                ("Return to Home Directory", self.return_to_home),
-                ("Add/Remove Dataset Filters", self.add_remove_filters),
                 ("List Files", self.list_files),
-                ("Return to Shell", self.exit)
+                ("Back to Main Menu", self.main_menu)
+            ]
+        )
+
+    def list_all_datasets(self):
+        """List the complete set of datasets which have been indexed by the workbench."""
+
+        # Print:
+        #   Dataset tree beneath the cwd
+        print(self.wb.datasets.format_dataset_tree())
+
+        # Print the number of datasets and any filters which have been applied
+        self.print_filters()
+
+        # Go back to the "Explore Datasets" menu
+        self.explore_datasets_menu()
+
+
+    def explore_datasets_menu(self):
+        """Inspect and navigate the available indexed datasets."""
+
+        self.select_func(
+            """Would you like to:""",
+            [
+                ("List All Datasets", self.list_all_datasets),
+                ("Add/Remove Dataset Filters", self.add_remove_filters),
+                ("Import Existing Dataset", self.import_folder),
+                ("Change Directory", self.change_directory_menu),
+                ("Back to Main Menu", self.main_menu)
             ]
         )
 
@@ -240,27 +271,6 @@ class WorkbenchMenu:
 
         # Go back to the main menu
         self.main_menu()
-
-    def more_options_menu(self):
-        """Show the 'More Options' menu"""
-
-        # List of available options
-        self.select_func(
-            """Options:""",
-            [
-                ("Import Existing Dataset", self.import_folder),
-                ("Browse Tools", self.browse_tool_menu),
-                ("Manage Repositories", self.manage_repositories_menu),
-                ("Back", self.main_menu)
-            ]
-        )
-
-    def return_to_home(self):
-        """Navigate to the top-level data directory."""
-
-        self.change_directory(
-            self.wb._top_level_folder("data")
-        )
 
     def change_directory(self, path):
         """Change the working directory and return to the main menu."""
