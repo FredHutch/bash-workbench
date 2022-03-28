@@ -40,27 +40,28 @@ The underlying code used by the BASH Workbench includes adapters for each type o
 ### Dataset
 
 A **dataset** is a folder containing any number of files or subfolders.
-However, it cannot contain any nested **datasets**.
 **Datasets** can be created by the BASH Workbench as the output of a **tool**, or by simply indexing the contents of an existing folder.
 
-### Collection
+### Tool Repositories
 
-A **collection** is a folder which contains any number of **datasets** and **collections**.
-The BASH Workbench will make it easier to keep track of **collections** of **datasets** using a typical folder hierarchy system.
+The BASH Workbench keeps track of a collection of **repositories** which contain **tools**. Each **tool** consists of a shell script which can be run on a defined set of file and/or parameter inputs.
 
-### Tool
+### Launchers
 
-The BASH Workbench keeps track of a collection of **tools**, each of which consists of a shell script which can be run on a defined set of file and/or parameter inputs.
+The way in which a particular set of **tools** can be executed on a type of computational system is defined as a **launcher**.
+For example, a single **tool** may be run on a laptop, SLURM cluster, or in the cloud by using a different **launcher** for each.
+The **launcher** makes it easier for a user to re-use a job submission script and associated parameters across a collection of **tools**.
 
-### Configuration
+### Parameters
 
-The way in which a particular set of **tools** can be executed on a type of computational system is defined as a **configuration**.
-The **configuration** makes it easier for a user to re-use a job submission script and associated parameters across a collection of **tools**.
+When using a **tool** or **launcher**, a user may want to re-use the settings or **parameters** across multiple **datasets**.
+Some examples of **parameters** that a user may wish to save and re-use with the BASH Workbench may be the location of a folder
+used to save temporary files, or the username associated with a SLURM account.
 
 ## Implementation
 
 The BASH Workbench makes it easier to manage and manipulate an existing filesystem, and does not require that any data is moved to a dedicated location.
-By using the file prefix `._wb_` (for 'workbench'), the Workbench can annotate any existing folder and store associated metadata in-place.
+By using a dedicated subfolder `._wb/` (for 'workbench'), the Workbench can annotate any existing folder and store associated metadata in-place.
 It is important to remember that this metadata is visible to anyone who has permission to view the contents of this folder.
 In other words, if one Workbench user creates or imports a dataset it will be visible to any other Workbench user who has access to that folder.
 The process of sharing data between users is thereby entirely managed by the file system access permissions, and not by the Workbench.
@@ -68,17 +69,22 @@ The process of sharing data between users is thereby entirely managed by the fil
 Relying on the file system for user authorization and file management is a core principle of the BASH Workbench.
 Rather than storing user-level permissions in a separate database, the Workbench simply mirrors the permissions which have been granted to each user by the underlying file system (or object storage). Administrators have been successfully maintaining multitenant computing clusters for years, and there's no need to reinvent that particular wheel.
 
-### Folder Annotation
+### Dataset Annotation
 
-Every **dataset** and **collection** contains a file `._wb_attributes.json` which contains any metadata annotating that folder.
-The folder attributes JSON is structured as an ordered list of key-value pairs, for example:
+Every **dataset** folder contains a file `._wb/index.json` which contains any metadata annotating that folder.
+The index JSON is structured as a set of key-value pairs, for example:
 ```
 {
-    "type": "dataset",
-    "created_at": "2022-02-14 23:00:14"
+    "uuid": "cb16a629-4eda-4da0-9d10-65e3ad7388f9",
+    "created_at": "2022-02-14 23:00:14",
+    "tags": {},
+    "tool": "make_tar_gz",
+    "launcher": "base",
+    "name": "Example Dataset",
+    "description": "Longer description used to describe the contents of the example dataset."
 }
 ```
-The value of the `type` key may be either `"dataset"` or `"collection"`, but the content of all other keys is relatively unrestricted.
+
 This file is created whenever the Workbench indexes a folder, and may be modified directly by the workbench, by any **tool**, or by any user with permission.
 
 Useful elements of the folder attributes JSON may include:
@@ -91,51 +97,48 @@ Useful elements of the folder attributes JSON may include:
 The environment of each user is managed by updating the contents of
 the folder `$HOME/._workbench/`.
 The first subdirectory in `$HOME/._workbench/` contains a `profile` folder (default: `$HOME/._workbench/default/`).
-A single user can create additional `profile` folders (e.g. `$HOME/._workbench/demo`) to maintain alternate environments in the Workbench containing completely different **datasets**, **tools** and **configurations**.
+A single user can create additional `profile` folders (e.g. `$HOME/._workbench/demo`) to maintain alternate environments in the Workbench containing completely different **datasets**, **tools** and **launchers**.
 
 The profile home folder contains:
 
- - `datasets/`: Contains symlinks to the **collections** which are
+ - `data/`: Contains symlinks to the **datasets** which are
  at the root of the dataset hierarchy;
- - `tools/`: Contains all of the **tools** available to the user
- from the local environment;
- - `configurations/`: Contains all of the **configurations** available
- to the user from the local environment;
+ - `params/`: Contains the saved settings used to run any **tools** or **launchers**.
  - `repositories/`: Contains any external code repositories which
- contain **tools** and **configurations** that have been imported
+ contain **tools** and **launchers** that have been imported
  by the user.
 
 ### Tools
 
-Each tool must consist of (1) a JSON file defining the files and parameters used as input (`tool.json`), and (2) an executable script which runs an appropriate analysis based on those inputs (`tool.sh`).
-Each of those files are located with the `tools/` folder in a subfolder named for the tool.
+Each tool must consist of (1) a JSON file defining the files and parameters used as input (`config.json`), and (2) an executable script which runs an appropriate analysis based on those inputs (`run.sh`).
+Each of those files are located within a **repository** folder under the `tool/` folder in a subfolder named for the tool.
 
 ```
-$HOME/._workbench/<PROFILE>/tools/<TOOL_NAME>/tool.json
-$HOME/._workbench/<PROFILE>/tools/<TOOL_NAME>/tool.sh
+$HOME/._workbench/<PROFILE>/repositories/<REPO_NAME>/tool/<TOOL_NAME>/config.json
+$HOME/._workbench/<PROFILE>/repositories/<REPO_NAME>/tool/<TOOL_NAME>/run.sh
 ```
 
-### Configurations
+### Launchers
 
-Each configuration must consist of (1) a JSON file defining the files and  parameters used as input (`config.json`), and (2) an executable script which invokes a tool script appropriately, based on those inputs (`config.sh`).
-Each of those files are located with the `config/` folder in a subfolder named for the configuration.
+Each launcher must consist of (1) a JSON file defining the files and parameters used as input (`config.json`), and (2) an executable script which invokes a tool script appropriately, based on those inputs (`run.sh`).
+Each of those files are located within a **repository** folder under the `launcher/` folder in a subfolder named for the launcher.
 
 ```
-$HOME/._workbench/<PROFILE>/config/<CONFIG_NAME>/config.json
-$HOME/._workbench/<PROFILE>/config/<CONFIG_NAME>/config.sh
+$HOME/._workbench/<PROFILE>/repositories/<REPO_NAME>/launcher/<LAUNCHER_NAME>/config.json
+$HOME/._workbench/<PROFILE>/repositories/<REPO_NAME>/launcher/<LAUNCHER_NAME>/run.sh
 ```
 
-### Sharing Tools and Configurations
+### Sharing Tools and Launchers
 
-Any external code repository which contains a hidden folder `._workbench/` may be used to host **tools** and **configurations**.
-Those tools will be referenced with a `source` field corresponding to the repository, while all of the local resources will be referenced with a `source` value of `home`.
+Any external code repository which contains a hidden folder `._wb/` may be used to host **tools** and **launchers**.
 
-For example, when a user runs the following tool:
-```
-{"tool": "aligner", "source": "ExternalOrg/UsefulRepo"}
-```
-The GitHub repository `ExternalOrg/UsefulRepo` will be cloned to
-`$HOME/._workbench/<PROFILE>/repositories/` and the **tool** will be sourced
-from the subfolder `$HOME/._workbench/<PROFILE>/tools/aligner/`.
+Repositories can be sourced either from GitHub or by linking to a local repository.
 
-With this approach, it should be possible to distribute the tools and configurations needed to run a particular analysis by anyone using the BASH Workbench.
+When a repository is downloaded from GitHub, it is placed in a folder named for both the organization and repository.
+For example, when a user downloads the repository [FredHutch/bash-workbench-tools](https://www.github.com/FredHutch/bash-workbench-tools) it will be located in `$HOME/._workbench/<PROFILE>/repositories/FredHutch_bash-workbench-tools` and referenced as `FredHutch_bash-workbench-tools`.
+
+Each **tool** or **launcher** is referenced by its repository and name.
+
+For example, when a user runs the **tool** `FredHutch_bash-workbench-tools/make_tar_gz`, it will reference the tool which is configured within `$HOME/._workbench/<PROFILE>/repositories/FredHutch_bash-workbench-tools/._wb/tool/make_tar_gz/`
+
+With this approach, it should be possible to distribute the **tools** and **launchers** needed to run a particular analysis by anyone using the BASH Workbench.
