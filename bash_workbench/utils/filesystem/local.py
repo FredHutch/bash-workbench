@@ -80,7 +80,7 @@ def read_json(path):
 def write_json(dat, path, **kwargs):
     """Write a file in JSON format."""
 
-    with open(path, 'w') as handle:
+    with open(path, mode='w') as handle:
         json.dump(dat, handle, **kwargs)
 
 def read_text(path):
@@ -88,7 +88,7 @@ def read_text(path):
 
     assert os.path.exists(path), f"Cannot read text, file does not exist {path}"
 
-    with open(path, 'r') as handle:
+    with open(path, mode='r') as handle:
         return handle.read()
 
 def write_text(dat, path):

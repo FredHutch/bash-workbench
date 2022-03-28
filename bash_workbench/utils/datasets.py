@@ -1,10 +1,13 @@
-from bash_workbench.utils import dataset
+from .dataset import Dataset
 
 
 class Datasets:
     """Collection of datasets with useful helper functions."""
 
-    def __init__(self):
+    def __init__(self, wb):
+
+        # Attach the workbench
+        self.wb = wb
         
         # Key each Dataset by its uuid
         self.datasets = dict()
@@ -12,17 +15,65 @@ class Datasets:
         # Keep track of the parent of each dataset
         self.parent_dict = dict()
 
+        # Keep track of the absolute path of each dataset
+        # abs_path -> uuid
+        self.path_dict = dict()
+
         # Keep track of whether each dataset passes the filter
         self.passes_filter = dict()
 
         # Keep a list of all filters which have been applied
         self.filters = list()
 
-    def add(self, ds):
+        # Iterate over all of the datasets and collections linked to the home folder
+        for ds in self.wb.walk_home_tree():
+
+            # Add the dataset to the collection
+            self.add(ds)
+
+    def from_path(self, path:str) -> Dataset:
+        """Return a Dataset for a particular path."""
+
+        # Get the absolute path
+        path = self.wb.filelib.abs_path(path)
+
+        # If the path has already been parsed
+        if self.path_dict.get(path) is not None:
+
+            # Return that dataset
+            return self.path_dict.get(path)
+
+        # If the path has not yet been parsed
+        else:
+
+            # Make a dataset object
+            ds = Dataset(
+                base_path=path,
+                filelib=self.wb.filelib,
+                logger=self.wb.logger,
+                verbose=self.wb.verbose
+            )
+
+            # If the folder is already indexed
+            if ds.complete:
+
+                # Add it to the collection
+                self.add(ds)
+
+            # Return the dataset
+            return ds
+
+    def add(self, ds:Dataset) -> None:
         """Add a single dataset."""
 
+        # If the dataset is not indexed
+        if ds.index is None:
+
+            # Index it
+            ds.create_index()
+
         # Add the dataset attributes to the config object
-        ds.index["path"] = ds.path
+        ds.index["path"] = ds.base_path
         ds.index["children"] = ds.children()
 
         # For each of the children of the dataset
@@ -31,11 +82,18 @@ class Datasets:
             # Mark the parent of those datasets
             self.parent_dict[child_uuid] = ds.index["uuid"]
 
+            # Mark the parent in the index of the child
+            if self.datasets.get(child_uuid) is not None:
+                self.datasets[child_uuid]["parent"] = ds.index["uuid"]
+
         # If the parent of this dataset is known, add it
         ds.index["parent"] = self.parent_dict.get(ds.index["uuid"])
 
         # Add it to the dict, keyed by uuid
         self.datasets[ds.index["uuid"]] = ds.index
+
+        # Record the path -> uuid
+        self.path_dict[ds.index["uuid"]] = ds.base_path
 
         # By default, all datasets initially pass the filter
         self.passes_filter[ds.index["uuid"]] = True

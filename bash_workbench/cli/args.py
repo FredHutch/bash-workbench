@@ -1,21 +1,50 @@
 import argparse
 import os
-import bash_workbench as wb
+import json
+
+
+def read_asset_configs() -> dict:
+    """Before setting up the parser, read any asset configurations from the current working directory."""
+    
+    asset_configs = dict()
+
+    # Check for configurations of both a tool and launcher    
+    for asset_type in ["tool", "launcher"]:
+
+        # If the index folder eixsts
+        if os.path.exists("._wb") and os.path.isdir("._wb"):
+
+
+            # Get the folder used for the asset
+            asset_folder = os.path.join("._wb", asset_type)
+
+            # If the asset folder exists
+            if os.path.exists(asset_folder) and os.path.isdir(asset_folder):
+
+                # Get the file used for the configuration
+                asset_json = os.path.join("._wb", asset_type, "config.json")
+
+                # If the file exists
+                if os.path.exists(asset_json):
+
+                    # Read the configuration
+                    with open(asset_json) as handle:
+                        asset_config = json.load(handle)
+
+                        # If there are arguments defined
+                        if asset_config.get("args") is not None:
+
+                            # Save them
+                            asset_configs[asset_type] = asset_config.get("args")
+
+    return asset_configs
+
 
 def make_parser():
     """Return a base parser used to format command line arguments for the Workbench CLI."""
 
     # Before setting up the parser, read any asset configurations from the current working directory
-    ds = wb.utils.dataset.Dataset(os.getcwd())
-
-    asset_configs = {
-        asset_type: ds.__dict__.get(asset_type)
-        for asset_type in ["tool", "launcher"]
-    }
-    asset_configs = {
-        k: v["args"] if v is not None and v.get("args") is not None else {}
-        for k, v in asset_configs.items()
-    }
+    asset_configs = read_asset_configs()
 
     parser = argparse.ArgumentParser(
         description="Command Line Interface for the BASH Workbench"
@@ -263,7 +292,7 @@ def make_parser():
                     default=os.getcwd(),
                     help="Dataset folder to be configured"
                 ),
-                **asset_configs["tool"]
+                **asset_configs.get("tool", {})
             }
         ),
         dict(
@@ -277,7 +306,7 @@ def make_parser():
                     default=os.getcwd(),
                     help="Dataset folder to be configured"
                 ),
-                **asset_configs["launcher"]
+                **asset_configs.get("launcher", {})
             }
         ),
         dict(
@@ -405,7 +434,7 @@ def make_parser():
             Download a GitHub repository for local execution, if it does not already exist
             """,
             kwargs={
-                "name": dict(
+                "remote-name": dict(
                     type=str,
                     required=True,
                     help="Name of repository to add (e.g. FredHutch/bash-workbench-tools)"

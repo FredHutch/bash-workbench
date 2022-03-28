@@ -18,26 +18,49 @@ def cli():
     # Parse the arguments
     args = parser.parse_args()
 
+    # Get the library of functions used to interact with the filesystem
+    filelib = wb.utils.filesystem.__dict__.get(args.filesystem)
+
+    # If the base_folder field was not provided
+    if args.base_folder is None:
+
+        # Set the location as ~/.workbench/
+        args.base_folder = filelib.path_join(filelib.home(), "._workbench")
+
     # If the base folder does not exist
     if not os.path.exists(args.base_folder):
 
         # Create it
-        os.makedev(args.base_folder)
+        os.makedirs(args.base_folder)
+    
+    assert args.profile is not None, "Must provide profile"
+
+    # The home folder for the workbench is <base_folder>/<profile>/
+    base_path = filelib.path_join(args.base_folder, args.profile)
+
+    # If the folder does not exist
+    if not filelib.exists(base_path):
+
+        # Create it
+        filelib.mkdir_p(base_path)
+
+    # Resolve the absolute path to the home folder
+    base_path = filelib.abs_path(base_path)
 
     # Get a logger
     # If the user specified a function, output to the screen
     # Either way, append to a log file in the base folder
     logger = wb.utils.logging.setup_logger(
         log_stdout="func" in args.__dict__,
-        log_fp=os.path.join(args.base_folder, ".wb_log"),
+        log_fp=os.path.join(base_path, ".wb_log"),
     )
 
     # Set up a Workbench object
     WB = wb.utils.workbench.Workbench(
-        base_folder=args.base_folder,
-        profile=args.profile,
-        filesystem=args.filesystem,
-        logger=logger
+        base_path=base_path,
+        filelib=filelib,
+        logger=logger,
+        verbose=False
     )
 
     # If the user did not provide any command to run

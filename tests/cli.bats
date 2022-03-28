@@ -19,11 +19,8 @@
   # Validate that all files were created as appropriate
   [ -d base_folder ]
   [ -d base_folder/test ]
-  [ -d base_folder/test/launcher ]
   [ -d base_folder/test/data ]
-  [ -d base_folder/test/tool ]
   [ -d base_folder/test/repositories ]
-  [ -d base_folder/test/linked_repositories ]
   [ -d base_folder/test/params ]
 }
 
@@ -142,6 +139,14 @@
   [ $(wb find_datasets --tag position=tier1 extra=special | jq 'length') == 2 ]
 }
 
+@test "add_repository" {
+
+  wb add_repo --remote-name FredHutch/bash-workbench-tools
+
+  [ -d base_folder/test/repositories/FredHutch_bash-workbench-tools ]
+
+}
+
 @test "list_tools" {
 
   # List the basic set of tools available from the package
@@ -159,7 +164,10 @@
 @test "setup_dataset" {
 
   # Set up the assets needed for analysis in a dataset folder
-  wb setup_dataset --path ext_data/data_folder_1 --tool make_tar_gz --launcher base
+  wb setup_dataset \
+    --path ext_data/data_folder_1 \
+    --tool FredHutch_bash-workbench-tools/make_tar_gz \
+    --launcher FredHutch_bash-workbench-tools/base
   
 }
 
@@ -274,35 +282,27 @@
 
 }
 
-@test "add_repository" {
-
-  wb add_repo --name FredHutch/bash-workbench-tools
-
-  [ -d base_folder/test/repositories/FredHutch/bash-workbench-tools ]
-
-}
-
 @test "list_repositories" {
 
   REPO_LIST="$(wb list_repos)"
   echo ${REPO_LIST}
 
   [[ $(echo ${REPO_LIST} | jq 'length') == 1 ]]
-  [[ $(echo ${REPO_LIST} | jq '.[0]') == *"FredHutch/bash-workbench-tools"* ]]
+  [[ $(echo ${REPO_LIST} | jq '.[0]') == *"FredHutch_bash-workbench-tools"* ]]
 
 }
 
 @test "update_repository" {
 
-  wb update_repo --name FredHutch/bash-workbench-tools
+  wb update_repo --name FredHutch_bash-workbench-tools
 
 }
 
 @test "delete_repository" {
 
-  wb delete_repo --name FredHutch/bash-workbench-tools
+  wb delete_repo --name FredHutch_bash-workbench-tools
 
-  [ ! -d base_folder/test/repositories/FredHutch/bash-workbench-tools ]
+  [ ! -d base_folder/test/repositories/FredHutch_bash-workbench-tools ]
 
 }
 
@@ -320,18 +320,18 @@
   wb link_local_repo --path $PWD/local_repositories/bash-workbench-tools --name bash_workbench_tools
 
   # Make sure that the repository has been linked
-  LINKED_REPO_LIST="$(wb list_linked_repos)"
-  echo "${LINKED_REPO_LIST}"
-  [[ $(echo ${LINKED_REPO_LIST} | jq 'length') == 1 ]]
-  [[ $(echo ${LINKED_REPO_LIST} | jq '.[0]') == *"bash_workbench_tools"* ]]
+  REPO_LIST="$(wb list_repos)"
+  echo "${REPO_LIST}"
+  [[ $(echo ${REPO_LIST} | jq 'length') == 1 ]]
+  [[ $(echo ${REPO_LIST} | jq '.[0]') == *"bash_workbench_tools"* ]]
 
   # Remove the link
   echo "Unlinking repository"
   wb unlink_local_repo --name bash_workbench_tools
 
   # Make sure that the repository has been unlinked
-  echo "${LINKED_REPO_LIST}"
-  LINKED_REPO_LIST="$(wb list_linked_repos)"
-  [[ $(echo ${LINKED_REPO_LIST} | jq 'length') == 0 ]]
+  echo "${REPO_LIST}"
+  REPO_LIST="$(wb list_repos)"
+  [[ $(echo ${REPO_LIST} | jq 'length') == 0 ]]
 
 }

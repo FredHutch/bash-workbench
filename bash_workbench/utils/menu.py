@@ -18,11 +18,11 @@ class WorkbenchMenu:
         # Attach the workbench which has been provided
         self.wb = WB
 
+        # Set up the root folder
+        self.wb.setup_root_folder()
+
         # Define a spacer which will indent text
         self.spacer = "    "
-
-        # Parse all of the datasets available from the home directory
-        self.wb.update_datasets()
 
         # Set the current working directory
         self.cwd = self.wb.filelib.getcwd()
@@ -403,23 +403,24 @@ class WorkbenchMenu:
             f"Confirm - create folder '{folder_name}'?"
         ):
 
+            # Get the absolute path
+            folder_path = self.wb.filelib.abs_path(folder_path)
+
             # Create the folder
             self.print_line(f"Creating folder {folder_path}")
             self.wb.filelib.mkdir_p(folder_path)
 
             # Index it
-            ds = Dataset(folder_path)
-            ds.create_index()
+            self.wb.index_folder(folder_path)
+
+            # Get the Dataset object
+            ds = self.wb.datasets.from_path(folder_path)
 
             # Set the name and description
             self.print_line(f"Adding name {folder_name}")
             ds.set_attribute("name", folder_name)
             self.print_line(f"Adding description {folder_desc}")
             ds.set_attribute("description", folder_desc)
-
-            # Update the indexed datasets
-            self.print_line("Updating list of datasets")
-            self.wb.update_datasets()
 
             # Move to the folder
             self.change_directory(

@@ -1,76 +1,58 @@
-import bash_workbench as wb
 from bash_workbench.utils.asset import Asset
-from bash_workbench.utils.dataset import Dataset
 from bash_workbench.utils.repository import Repository
+from bash_workbench.utils.dataset import Dataset
 from bash_workbench.utils.datasets import Datasets
+from bash_workbench.utils.folder_hierarchy import FolderHierarchyBase
+from bash_workbench.utils.timestamp import Timestamp
 from importlib_resources import files
 
-class Workbench:
+class Workbench(FolderHierarchyBase):
     """Object used to organize BASH Workbench attributes and methods."""
 
-    def __init__(
-        self,
-        # By default, the base folder is in the home directory
-        base_folder=None,
-        # Default profile name
-        profile="default",
-        # Parameter used to specify the filesystem being used,
-        filesystem="local",
-        # Optionally specify a logger instance
-        logger=None,
-        # Optionally print messages to the screen
-        verbose=False
-    ):
+    # The expected subfolders in the base workbench directory
+    # These folder will be created if they do not exist
+    structure = [
+        dict(name="data"),
+        dict(name="params"),
+        dict(name="repositories")
+    ]
 
-        # Attach the module used for this filesystem
-        self.filelib = wb.utils.filesystem.__dict__.get(filesystem)
+    def read_contents(self) -> None:
+        """Function is executed immediately after the folder structure is populated."""
 
-        assert self.filelib is not None, f"Cannot find filesystem module {self.filesystem}"
+        # Class used to encode / decode timestamps
+        self.timestamp = Timestamp()
 
-        # If the base_folder field was not provided
-        if base_folder is None:
+        # Make sure that all of the appropriate directories exist
+        self.setup_root_folder()
 
-            # Set the location as ~/.workbench/
-            base_folder = self.filelib.path_join(self.filelib.home(), "._workbench")
-        
-        assert profile is not None, "Must provide profile"
+        # Parse the folders which are contained within repositories/
+        # Each Repository contains an `assets` attriute which is a dict
+        # with keys 'tool' and 'launcher' with the list of the Assets contained
+        # in each repository, if any. 
+        self.repositories = {
+            folder_name: Repository(
+                base_path=self.path("repositories", folder_name),
+                logger=self.logger,
+                verbose=self.verbose,
+                filelib=self.filelib
+            )
+            for folder_name in self.listdir("repositories")
+        }
+        # If the repository does not contain
+        # a folder ._wb/, then Repository.complete == False.
+        self.repositories = {
+            repo_name: repo
+            for repo_name, repo in self.repositories.items()
+            if repo.complete
+        }
 
-        # Attach the init variables to the object
-        self.profile = profile
-        self.filesystem = filesystem
-        self.logger = logger
-        self.verbose = verbose
-        self.timestamp = wb.utils.timestamp.Timestamp()
-
-        # The home folder for the workbench is <base_folder>/<profile>/
-        self.home_folder = self.filelib.path_join(base_folder, profile)
-
-        # If the data folder does not exist
-        if not self.filelib.exists(self._top_level_folder("data")):
-
-            # Create it
-            self.filelib.makedirs(self._top_level_folder("data"))
-            self.log(f"Created {self._top_level_folder('data')}")
-        
-        else:
-
-            self.log(f"Exists {self._top_level_folder('data')}")
-
-        # Resolve the absolute path to the home folder
-        self.home_folder = self.filelib.abs_path(self.home_folder)
+        # Parse all of the datasets contained within data/
+        self.datasets = Datasets(self)
 
         # Get the folder which contains assets installed with this package
         self.assets_folder = files("bash_workbench").joinpath('assets')
-
-    def log(self, msg):
-        """Print a logging message using the logger if available, and the screen if `verbose`."""
-
-        if self.logger is not None:
-            self.logger.info(msg)
-
-        if self.verbose:
-            print(msg)
-
+        
     def _run_function(self, func, **kwargs):
         """Execute a function with the specified name."""
     
@@ -85,65 +67,38 @@ class Workbench:
             **kwargs
         )
 
-    def setup_root_folder(self):
+    def setup_root_folder(self) -> None:
         """Ensure that the root folder contains the required assets, and create them if necessary."""
 
-        self.log(f"Setting up root folder at {self.home_folder}")
+        # Make sure that all of the required top-level directories exist
+        self.populate_folders()
 
-        # For each of a series of subfolders
-        for subfolder in [
-            "data",
-            "launcher",
-            "tool",
-            "helper",
-            "repositories",
-            "linked_repositories",
-            "params"
-        ]:
-
-            # Construct the path for this subfolder inside the root folder
-            fp = self._top_level_folder(subfolder)
-
-            # If the path does not exist
-            if not self.filelib.exists(fp):
-
-                # Create it
-                self.filelib.makedirs(fp)
-                self.log(f"Created {fp}")
-
-            else:
-                self.log(f"Exists: {fp}")
-
-        # Add an index to the root data folder
-        self.index_folder(self._top_level_folder("data"))
-        self.change_name(
-            path=self._top_level_folder("data"),
-            name="Datasets"
-        )
-        self.change_description(
-            path=self._top_level_folder("data"),
-            description="Collection of all datasets indexed in the workbench"
-        )
-
-        # Provide each of the tools and launchers defined in the repository,
-        # if they do not already exist
-        self.update_base_toolkit(overwrite=False)
-
-    def index_folder(self, path:str=None):
+    def index_folder(self, path:str=None) -> dict:
 
         assert path is not None, "Must provide --path for folder to index"
 
         self.log(f"Preparing to index folder: {path}")
 
         # Create a Dataset object
-        ds = Dataset(path, filesystem=self.filesystem)
+        ds = self.datasets.from_path(path)
 
-        # Create the index
-        ds.create_index()
+        # If the index does not already exist
+        if ds.index is None:
 
-        # Finally, link this dataset to the home folder if it is not already
-        # nested below a collection which is similarly linked
-        self.add_to_home_tree(path)
+            # Create the index
+            self.log(f"Indexing folder: {path}")
+            ds.create_index()
+
+            # Finally, link this dataset to the home folder if it is not already
+            # nested below a collection which is similarly linked
+            self.log(f"Adding to home tree: {path}")
+            self.add_to_home_tree(path)
+
+            # Add it to the collection of datasets
+            self.datasets.add(ds)
+
+        else:
+            self.log("Index already exists")
 
         return ds.index
 
@@ -154,7 +109,7 @@ class Workbench:
         path = self.filelib.abs_path(path)
 
         # If the path _is_ the home dataset directory
-        if path == self.filelib.abs_path(self._top_level_folder("data")):
+        if path == self.path("data"):
 
             # Do not take any further action
             # (prevent the creation of a circular link)
@@ -169,7 +124,7 @@ class Workbench:
         for ds in self.walk_home_tree():
 
             # If we come across this folder
-            if ds.path == path:
+            if ds.base_path == path:
 
                 # Mark this path as seen
                 path_seen = True
@@ -200,7 +155,7 @@ class Workbench:
         folders_to_check = list()
 
         # To start, add the home folder to the list of folders to check
-        folders_to_check.append(self._top_level_folder("data"))
+        folders_to_check.append(self.path("data"))
 
         # Iterate while there are folders remaining to check
         while len(folders_to_check) > 0:
@@ -222,11 +177,15 @@ class Workbench:
                     # Skip it
                     continue
 
-                # Attempt to make a Dataset object
-                ds = Dataset(subpath)
+                # If there is no index
+                index_folder = self.filelib.path_join(subpath, "._wb")
+                index_json = self.filelib.path_join(subpath, "._wb", "index.json")
+                if self.filelib.exists(index_folder) is False or self.filelib.exists(index_json) is False:
+                    # Skip it
+                    continue
 
-                # If the folder is a dataset or collection
-                if ds.index is not None:
+                # If the folder has an index
+                else:
 
                     # If we've already seen it, there is some circular link which
                     # must be resolved by the user
@@ -237,7 +196,12 @@ class Workbench:
                     seen_folders.add(subpath)
 
                     # Emit this Dataset
-                    yield ds
+                    yield Dataset(
+                        base_path=subpath,
+                        verbose=self.verbose,
+                        filelib=self.filelib,
+                        logger=self.logger
+                    )
 
                     # Add the subpath to the list of paths to check next
                     folders_to_check.append(subpath)
@@ -255,7 +219,7 @@ class Workbench:
         folder_name = path.rsplit("/", 1)[1]
 
         # Get the path to the symlink
-        home_symlink = self._top_level_folder(f"data/{folder_name}")
+        home_symlink = self.path("data", folder_name)
 
         # To prevent collisions, add a suffix to make it unique (if not already)
         n = 0
@@ -265,7 +229,7 @@ class Workbench:
             n += 1
 
             # Make a new the path to the symlink
-            home_symlink = self._top_level_folder(f"data/{folder_name}_{n}")
+            home_symlink = self.path("data", f"{folder_name}_{n}")
 
         # Add a symlink
         self.filelib.symlink(path, home_symlink)
@@ -273,44 +237,16 @@ class Workbench:
     def links_from_home_directory(self):
         """Return the list of folders which are linked from the home data directory."""
 
-        # Assemble the path to the home data directory
-        data_home = self._top_level_folder("data")
-
         # Make a list of the linked folders
-        linked_folders = list()
-
-        # Iterate over the files in this folder
-        for fp in self.filelib.listdir(data_home):
-
+        return [
             # Construct the full path to each file
-            fp = self.filelib.path_join(data_home, fp)
-
-            # If the file is a symlink
-            if self.filelib.islink(fp):
-
-                # Add the target to the list
-                linked_folders.append(self.filelib.abs_path(fp))
-
-        # Return the list of all folders which are linked
-        return linked_folders
-
-    def update_datasets(self):
-        """Parse all of the datasets available from the home directory."""
-
-        # Instantiate a collection of Datasets
-        self.datasets = Datasets()
-
-        # Iterate over all of the datasets and collections linked to the home folder
-        for ds in self.walk_home_tree():
-
-            # Add the dataset to the collection
-            self.datasets.add(ds)
+            self.path("data", fp)
+            # For each of the files in the data/ folder
+            for fp in self.listdir(self.path("data"))
+        ]
 
     def list_datasets(self):
         """Return a list of all datasets linked from the home folder."""
-
-        # Parse all of the datasets available from the home directory
-        self.update_datasets()
 
         # Return the simple dict of all datasets
         return self.datasets.datasets
@@ -322,9 +258,6 @@ class Workbench:
         tag=None
     ):
         """Find any datasets which match the provided queries."""
-
-        # Parse all of the datasets available from the home directory
-        self.update_datasets()
 
         # Filter the datasets based on the name, description, and/or tag filters provided
         self.filter_datasets(
@@ -397,9 +330,6 @@ class Workbench:
         datasets which match the provided pattern, as well as their parents
         """
 
-        # Parse all of the datasets available from the home directory
-        self.update_datasets()
-
         # Filter the datasets based on the name, description, and/or tag filters provided
         self.filter_datasets(
             name=name,
@@ -438,7 +368,7 @@ class Workbench:
         assert value is not None
 
         # Read the dataset
-        ds = Dataset(path)
+        ds = self.datasets.from_path(path)
 
         # Set the attribute
         ds.set_attribute(attribute, value)
@@ -459,7 +389,7 @@ class Workbench:
         assert value is not None
 
         # Read the dataset
-        ds = Dataset(path)
+        ds = self.datasets.from_path(path)
 
         # Set the tag
         ds.set_tag(key, value)
@@ -478,7 +408,7 @@ class Workbench:
         assert key is not None
 
         # Read the dataset
-        ds = Dataset(path)
+        ds = self.datasets.from_path(path)
 
         # Delete the tag
         ds.delete_tag(key)
@@ -486,110 +416,22 @@ class Workbench:
         # Return the updated configuration
         return ds.index
 
-    def _top_level_folder(self, folder_name):
-        """Return the path to a top-level folder in the home directory."""
-
-        return self.filelib.path_join(self.home_folder, folder_name)
-
-    def _top_level_file(self, folder_name, file_name):
-        """Return the path to a file in a top-level folder of the home directory."""
-
-        return self.filelib.path_join(self._top_level_folder(folder_name), file_name)
-
-    def _asset_folder(self, folder_name):
-        """Return the path to a top-level folder in the asset directory of the package."""
-
-        return self.filelib.path_join(self.assets_folder, folder_name)
-
-    def _asset_file(self, folder_name, filename):
-        """Return the path to a file in a top-level folder of the asset directory of the package."""
-
-        return self.filelib.path_join(self._asset_folder(folder_name), filename)
-
-    def _copy_repo_file_to_home(self, folder, filename, overwrite=False):
-        """Copy a file from the repository assets to the home directory."""
-
-        # The destination folder is in the home directory
-        destination_folder = self._top_level_folder(folder)
-        destination_path = self._top_level_file(folder, filename)
-
-        # Create the destination folder if it does not exist
-        self.filelib.mkdir_p(destination_folder)
-
-        # If the file already exists
-        if self.filelib.exists(destination_path):
-
-            # If the overwrite flag was not set
-            if not overwrite:
-
-                # Do not take any action
-                self.log(f"File already exists: {destination_path}")
-                return
-
-        # At this point, either the destination_path does not exist, or --overwrite was set
-
-        # Construct the path to the file in the asset folder
-        source_path = self._asset_file(folder, filename)
-
-        # Copy the file
-        self.log(f"Copying {source_path} to {destination_path}")
-        self.filelib.copyfile(source_path, destination_path, follow_symlinks=True)
-
-    def update_base_toolkit(self, overwrite=False):
-        """Copy the tools and launchers from the package into the home directory"""
-
-        # Copy all files in helpers/
-        for filename in self.filelib.listdir(self._asset_folder("helpers")):
-
-            # Copy the repository asset from the package to the home directory
-            self._copy_repo_file_to_home("helpers", filename, overwrite=overwrite)
-
-        # Copy the folders within the launcher/ and tool/ folders
-        for asset_type in ["launcher", "tool"]:
-
-            self.log(f"Copying all {asset_type} to home directory")
-
-            # Iterate over each of the tools or launchers
-            for asset_name in self.filelib.listdir(self._asset_folder(asset_type)):
-
-                # Reconstruct the full path
-                asset_path = self._asset_folder(f"{asset_type}/{asset_name}")
-
-                # If the asset is not a folder
-                if not self.filelib.isdir(asset_path):
-                    # Skip it
-                    continue
-
-                # Iterate over each of the files in that folder
-                for filename in self.filelib.listdir(asset_path):
-
-                    # Copy the asset from the package to the home directory
-                    self._copy_repo_file_to_home(
-                        f"{asset_type}/{asset_name}",
-                        filename,
-                        overwrite=overwrite
-                    )
-
-    def _list_assets(self, asset_type):
+    def _list_assets(self, asset_type) -> list:
 
         assert asset_type in ["tool", "launcher"]
 
-        # Get the folder which contains all of the assets of this type
-        asset_type_folder = self._top_level_folder(asset_type)
-
-        # Make a list for all of the tools
-        asset_list = []
-
-        # Iterate over the folders in the tools/ or launchers/ directory
-        for asset_name in self.filelib.listdir(asset_type_folder):
-
-            # Validate that the asset has a properly formatted configuration
-            asset = Asset(WB=self, asset_name=asset_name, asset_type=asset_type)
-
-            # Add the name to the list
-            asset_list.append(asset.config["key"])
-
-        return asset_list
+        # Make a list for all of the tools as a tuple of repository, tool
+        return [
+            f"{repo_name}/{tool_name}"
+            # Iterate over all of the folder in repositories/
+            for repo_name, repo in self.repositories.items()
+            # if that folder contains ._wb/
+            if repo.complete
+            # Iterate over every folder in ._wb/{asset_type}
+            for tool_name, tool in repo.assets.get(asset_type, {}).items()
+            # If that folder contains config.json and run.sh
+            if tool.complete
+        ]
     
     def list_launchers(self):
         """List the launchers available for creating datasets."""
@@ -601,38 +443,60 @@ class Workbench:
 
         return self._list_assets("tool")
 
-    def _copy_helpers_to_dataset(self, dataset_path, overwrite=False):
+    def _asset_folder(self, folder_name):
+        """Return the path to a top-level folder in the asset directory of the package."""
+
+        return self.filelib.path_join(self.assets_folder, folder_name)
+
+    def _copy_helpers_to_dataset(self, dataset_path):
         """Copy all of the helper scripts to a dataset inside the subfolder ._wb"""
 
         # Instantiate a Dataset object
-        dataset = Dataset(dataset_path)
+        dataset = self.datasets.from_path(dataset_path)
 
         # All of the files will be copied to the folder
         # {dataset.wb_folder}/helpers/
-        dest_folder = self.filelib.path_join(dataset.wb_folder, "helpers")
+        dest_folder = dataset.wb_path("helpers")
 
         # Create the folder if it does not exist
         self.filelib.mkdir_p(dest_folder)
 
         # Iterate over all of the files in the "helpers" folder
-        helpers_folder = self._top_level_folder("helpers")
-        for fn in self.filelib.listdir(helpers_folder):
+        # of the installed bash_workbench package
+        for filename in self.filelib.listdir(self._asset_folder("helpers")):
 
-            # Reconstruct the source path
-            source_fp = self.filelib.path_join(helpers_folder, fn)
+            # Copy the repository asset from the package to the dataset
+            self.filelib.copyfile(
+                self.filelib.path_join(
+                    self._asset_folder("helpers"),
+                    filename
+                ),
+                self.filelib.path_join(
+                    dest_folder,
+                    filename
+                )
+            )
 
-            # Make the path for the destination
-            dest_fp = self.filelib.path_join(dest_folder, fn)
+    def asset(self, asset_type:str=None, asset_name:str=None) -> Asset:
+        """Return an Asset from a particular repository, identified by name."""
 
-            # If the file already exists
-            if self.filelib.exists(dest_fp):
+        # The asset_name should be <repository>/<asset>
+        msg = "Asset name must specify <repository>/<asset>"
+        assert "/" in asset_name, msg
+        assert len(asset_name.split("/")) == 2, msg
 
-                # Raise an error if the overwrite flag was not set
-                assert overwrite, f"File already exists: {dest_fp}"
+        repository, name = asset_name.split("/")
 
-            # Copy the file
-            self.log(f"Copying {source_fp} to {dest_fp}")
-            self.filelib.copyfile(source_fp, dest_fp)
+        # Get the Repository
+        repo = self.repositories.get(repository)
+
+        assert repo is not None, f"Invalid repository: {repository}"
+
+        assert asset_type in repo.assets, f"Repository does not contain any assets of type {asset_type}"
+
+        assert name in repo.assets[asset_type], f"Repository {repository} does not contain any {asset_type} with the name {name}"
+
+        return repo.assets[asset_type][name]
             
     def setup_dataset(self, path=None, tool=None, launcher=None, overwrite=False):
         """Set up a dataset with a tool and a launcher."""
@@ -640,17 +504,19 @@ class Workbench:
         self.log(f"Setting up a dataset for analysis at {path}")
 
         # Instantiate a Dataset object
-        ds = Dataset(path, filesystem=self.filesystem)
+        ds = self.datasets.from_path(path)
 
         msg = f"path must indicate an already-indexed folder"
         assert ds.index is not None, msg
 
-        # Instantiate the tool and launcher
-        tool = Asset(WB=self, asset_type="tool", asset_name=tool)
-        launcher = Asset(WB=self, asset_type="launcher", asset_name=launcher)
 
-        # Copy the tool and asset to the dataset
+        # Instantiate the tool and launcher, and copy assets to the dataset
+        self.log(f"Using tool {tool} for analysis")
+        tool = self.asset(asset_type="tool", asset_name=tool)
         tool.copy_to_dataset(ds, overwrite=overwrite)
+
+        self.log(f"Using launcher {launcher} for analysis")
+        launcher = self.asset(asset_type="launcher", asset_name=launcher)
         launcher.copy_to_dataset(ds, overwrite=overwrite)
 
         # Record the time at which the scripts were set up
@@ -673,7 +539,7 @@ class Workbench:
         """Set the parameters used to run a tool or launcher in a particular dataset."""
 
         # Instantiate the dataset object
-        ds = Dataset(path)
+        ds = self.datasets.from_path(path)
 
         # The folder must be set up as an indexed folder
         msg = f"Folder is not an indexed folder: {path}"
@@ -754,7 +620,7 @@ class Workbench:
         """Save the parameters used to run a tool or launcher in a particular dataset."""
 
         # Instantiate the dataset object
-        ds = Dataset(path)
+        ds = self.datasets.from_path(path)
 
         # The folder must be set up as an indexed folder
         msg = f"Folder is not an indexed folder: {path}"
@@ -781,12 +647,10 @@ class Workbench:
         assert params is not None, msg
 
         # Construct the path to the folder which contains params for this asset
-        params_folder = self._top_level_folder(
-            self.filelib.path_join(
-                "params",
-                asset_type,       # 'tool' or 'launcher'
-                asset_name       # The name of the tool/launcher
-            )
+        params_folder = self.path(
+            "params",
+            asset_type,       # 'tool' or 'launcher'
+            asset_name       # The name of the tool/launcher
         )
 
         self.log(f"Saving params to {params_folder}")
@@ -844,8 +708,8 @@ class Workbench:
         ), msg
 
         # Set up the path to the saved params
-        params_fp = self.filelib.path_join(
-            self._top_level_folder("params"),
+        params_fp = self.path(
+            "params",
             asset_type,
             asset_name,
             f"{params_name}.json"
@@ -873,12 +737,10 @@ class Workbench:
         suffix = ".json"
 
         # Construct the path to the folder which contains params for this asset
-        params_folder = self._top_level_folder(
-            self.filelib.path_join(
-                "params",
-                asset_type, # 'tool' or 'launcher'
-                name        # The name of the tool/launcher
-            )
+        params_folder = self.path(
+            "params",
+            asset_type, # 'tool' or 'launcher'
+            name        # The name of the tool/launcher
         )
 
         self.log(f"Listing params from {params_folder}")
@@ -902,94 +764,54 @@ class Workbench:
         """Launch the tool which has been configured in a dataset."""
 
         # Copy all of the helpers to the dataset
-        self._copy_helpers_to_dataset(path, overwrite=True)
+        self._copy_helpers_to_dataset(path)
 
         # Instantiate the dataset object
-        ds = Dataset(path)
+        ds = self.datasets.from_path(path)
 
         # Run the dataset
         ds.run()
 
-    def repository(self, name):
+    def repository(self, local_name:str=None) -> Repository:
         """Instantiate a Repository object."""
 
         return Repository(
-            name=name,
-            home_folder=self.home_folder,
+            base_path=self.path("repositories", local_name),
             filelib=self.filelib,
-            logger=self.logger
+            logger=self.logger,
+            verbose=self.verbose
         )
-
-    def add_repo(self, name=None):
-        """Clone/download a repository from GitHub if it does not already exist."""
-
-        # Instantiate a Repository object
-        self.log(f"Adding repository {name}")
-        repo = self.repository(name)
-
-        # If the repository does not already exist
-        if not repo.exists():
-
-            # Clone it
-            self.log("Cloning repository")
-            repo.clone()
-
-        else:
-            self.log("Repository already exists")
 
     def list_repos(self):
         """Return a list of the GitHub repositories which are available locally."""
 
-        # Make a list of repositories
-        repo_list = list()
+        return list(self.repositories.keys())
 
-        # Point to the base folder in which all repositories are saved
-        repo_home = self._top_level_folder("repositories")
+    def add_repo(self, remote_name:str=None, method:str="https", server="github.com"):
+        """
+        Clone/download a repository from GitHub.
+        Raise an error if it already exists locally.
+        """
 
-        # If the folder does not exist
-        if not self.filelib.exists(repo_home):
+        # The remote_name must be of the format <org>/<repo>
+        msg = "Remote name for repository must contain <organization>/<repository>"
+        assert "/" in remote_name, msg
+        assert len(remote_name.split("/")) == 2, msg
 
-            # Create it
-            self.filelib.makedirs(repo_home)
+        # Instantiate a Repository object
+        self.log(f"Adding repository {remote_name}")
 
-        # Iterate over each of the folders in "repositories/"
-        for org_folder in self.filelib.listdir(repo_home):
+        # Construct the local name to be used
+        local_name = remote_name.replace("/", "_")
 
-            # Iterate over any subfolders
-            for repo_folder in self.filelib.listdir(
-                self.filelib.path_join(
-                    repo_home,
-                    org_folder
-                )
-            ):
+        # Make sure the local name has not been used before
+        assert local_name not in self.repositories
 
-                # The name of the repository should match the folders
-                repo_name = f"{org_folder}/{repo_folder}"
+        # Instantiate the repository object
+        repo = self.repository(local_name=local_name)
 
-                # Try to instantiate a repository object
-                repo = self.repository(repo_name)
-
-                # If the repository has been cloned
-                if repo.exists():
-
-                    # Add it to the list
-                    repo_list.append(repo_name)
-
-        return repo_list
-
-    def list_linked_repos(self):
-        """Return a list of the local repositories which have been linked."""
-
-        # Point to the base folder in which all repositories are saved
-        repo_home = self._top_level_folder("linked_repositories")
-
-        # If the folder does not exist
-        if not self.filelib.exists(repo_home):
-
-            # Create it
-            self.filelib.makedirs(repo_home)
-
-        return self.filelib.listdir(repo_home)
+        # Clone the remote repository
+        repo.clone(repo_name=remote_name, method=method, server=server)
 
     def link_local_repo(self, path=None, name=None):
         """Link a local repository (containing a ._wb/ directory of tools and/or launchers)."""
@@ -999,48 +821,98 @@ class Workbench:
         assert self.is_simple_name(name), msg
 
         # The name cannot have already been used for a local repository
-        assert name not in self.list_linked_repos(), f"{name} has already been used"
+        assert name not in self.repositories, f"{name} has already been used"
 
         # The path to the local repository must exist
         assert self.filelib.exists(path), f"Path does not exist: {path}"
 
         # Make a link
         self.log(f"Linking to {path} as '{name}'")
-        self.filelib.symlink(path, self._top_level_folder(f"linked_repositories/{name}"))
+        symlink_fp = self.path("repositories", name)
+        self.filelib.symlink(path, symlink_fp)
+
+        # Try to set up a git object
+        repo = Repository(
+            base_path=self.path("repositories", name),
+            logger=self.logger,
+            verbose=self.verbose,
+            filelib=self.filelib
+        )
+
+        # If this is not a valid git folder
+        if not repo.exists():
+
+            # Tell the user
+            self.log(f"Folder is not a valid git repository: {path}")
+            
+            # Remove the symbolic link
+            self.filelib.rm(symlink_fp)
+
+        # If this repository does not contain a folder ._wb/
+        elif not repo.complete:
+
+            # Tell the user
+            self.log(f"Folder does not contain ._wb/: {path}")
+            
+            # Remove the symbolic link
+            self.filelib.rm(symlink_fp)
+
+        # If there are no problems
+        else:
+
+            # Add it to the collection of repositories
+            self.repositories[name] = repo
 
     def unlink_local_repo(self, name=None):
         """Remove a link to a local repository."""
 
         # The name must have already been used for a local repository
-        assert name in self.list_linked_repos(), f"{name} is not a valid link"
+        assert name in self.repositories, f"{name} is not a valid repository"
+
+        # Get the location of the repository
+        repo_fp = self.path("repositories", name)
+
+        # The repository must be a link, not a cloned repository
+        assert self.filelib.islink(repo_fp), f"Repository is not a link: {name}"
 
         # Delete the link
         self.log(f"Removing link '{name}'")
-        self.filelib.rm(self._top_level_folder(f"linked_repositories/{name}"))
+        self.filelib.rm(repo_fp)
 
-    def update_repo(self, name=None):
+        # Remove the repository from the local dict
+        del self.repositories[name]
+
+    def update_repo(self, name:str=None):
         """Update a repository to the latest version."""
 
-        # Instantiate a Repository object
-        self.log(f"Setting up local repository for {name}")
-        repo = self.repository(name)
+        assert name is not None, "Must provide name"
+
+        # The name must have already been used for a local repository
+        assert name in self.repositories, f"{name} is not a valid repository"
+
+        # Get the repository
+        repo = self.repositories[name]
 
         # If the repository does not already exist
         if not repo.exists():
 
-            self.log(f"Cannot update {name}, repository has not yet been added")
+            self.log(f"Cannot update {name}, repository has not been set up")
 
         else:
 
-            self.log("Updating repository {name}")
+            self.log(f"Updating repository {name}")
             repo.pull()
 
-    def switch_branch(self, name=None, branch=None, force=True):
+    def switch_branch(self, name:str=None, branch:str=None, force:bool=True):
         """Switch to a different branch."""
 
-        # Instantiate a Repository object
-        self.log(f"Setting up local repository for {name}")
-        repo = self.repository(name)
+        assert name is not None, "Must provide name"
+
+        # The name must have already been used for a local repository
+        assert name in self.repositories, f"{name} is not a valid repository"
+
+        # Get the repository
+        repo = self.repositories[name]
 
         # Switch to the branch
         self.log(f"Switching to branch {branch}")
@@ -1049,9 +921,13 @@ class Workbench:
     def delete_repo(self, name=None):
         """Delete the local copy of a repository, if it exists."""
 
-        # Instantiate a Repository object
-        self.log(f"Setting up local repository for {name}")
-        repo = self.repository(name)
+        assert name is not None, "Must provide name"
+
+        # The name must have already been used for a local repository
+        assert name in self.repositories, f"{name} is not a valid repository"
+
+        # Get the repository
+        repo = self.repositories[name]
 
         # Delete the repository
         self.log(f"Deleting repository {name}")

@@ -1,23 +1,26 @@
 import bash_workbench as wb
+from .folder_hierarchy import FolderHierarchyBase
 import subprocess
 import uuid
 
-class Dataset:
-    """Object used to access and manipulate 'dataset' and 'collection' folders."""
+class Dataset(FolderHierarchyBase):
+    """Object used to access and manipulate dataset folders."""
 
-    def __init__(self, path:str=None, filesystem="local", wb_folder="._wb"):
+    # All workbench items are contained within the subfolder ._wb/
+    structure = [
+        {"name": "._wb/"}
+    ]
 
-        # Attach the module used for this filesystem
-        self.filelib = wb.utils.filesystem.__dict__.get(filesystem)
+    # Do not create that folder if it does not already exist
+    create_subfolders = False
 
-        # Record the absolute path to the folder
-        self.path = self.filelib.abs_path(path)
+    # Function runs when the dataset is initialized
+    def read_contents(self) -> None:
+
+        self.log(f"Reading contents of Dataset for {self.base_path}")
 
         # The path must point to a directory
-        assert self.filelib.isdir(self.path), f"Dataset must be a directory, not {self.path}"
-
-        # Keep track of the subfolder used to store workbench items
-        self.wb_folder = self.filelib.path_join(path, wb_folder)
+        assert self.filelib.isdir(self.base_path), f"Dataset must be a directory, not {self.base_path}"
 
         # Make a timestamp object
         self.timestamp = wb.utils.timestamp.Timestamp()
@@ -29,12 +32,6 @@ class Dataset:
 
         # Read in configurations of the tool and launcher, if they exist
         self.read_asset_configs()
-
-    def setup_wb_folder(self):
-        """Set up the wb_folder"""
-
-        # Create the folder if it does not exist
-        self.filelib.mkdir_p(self.wb_folder)
 
     def validate_asset_type_format(self, asset_type):
         """Make sure that the asset type string is valid."""
@@ -51,7 +48,7 @@ class Dataset:
         self.validate_asset_type_format(asset_type)
 
         # Make the folder
-        self.filelib.mkdir_p(self.filepath(asset_type))
+        self.filelib.mkdir_p(self.wb_path(asset_type))
 
     def delete_asset_folder(self, asset_type):
         """Delete an asset folder, if it exists."""
@@ -60,7 +57,7 @@ class Dataset:
         self.validate_asset_type_format(asset_type)
 
         # Remove the asset folder
-        self.filelib.rmdir(self.filepath(asset_type))
+        self.filelib.rmdir(self.wb_path(asset_type))
 
     def read_index(self):
         """Read in the dataset index."""
@@ -69,7 +66,7 @@ class Dataset:
         self.index = None
 
         # If the wb_folder does not exist
-        if not self.filelib.exists(self.wb_folder):
+        if not self.complete:
 
             # Then there cannot be any index within it
             # so we should stop now
@@ -92,7 +89,7 @@ class Dataset:
         """
 
         # Set up the path used for this asset
-        fp = self.filepath(fn)
+        fp = self.wb_path(fn)
 
         # If the file exists
         if self.filelib.exists(fp):
@@ -110,7 +107,7 @@ class Dataset:
         """Write out a JSON file with the prefix ._wb_ in the dataset folder."""
 
         # Set up the path to be written
-        fp = self.filepath(fn)
+        fp = self.wb_path(fn)
 
         # If the file exists
         if self.filelib.exists(fp):
@@ -124,7 +121,7 @@ class Dataset:
         """Write out a text file with the prefix ._wb_ in the dataset folder."""
 
         # Set up the path to be written
-        fp = self.filepath(fn)
+        fp = self.wb_path(fn)
 
         # If the file exists
         if self.filelib.exists(fp):
@@ -134,19 +131,19 @@ class Dataset:
 
         self.filelib.write_text(dat, fp, **kwargs)
 
-    def filepath(self, filename):
-        """Return the path to a file in the wb_folder."""
+    def wb_path(self, *subfolder_list) -> str:
+        """Return the path to a file in the ._wb/."""
 
-        return self.filelib.path_join(self.wb_folder, filename)
+        return self.path("._wb", *subfolder_list)
 
     def create_index(self):
         """Add an index to a folder."""
 
         # Raise an error if there already is an index
-        assert self.index is None, f"Already indexed, cannot overwrite ({self.path})"
+        assert self.index is None, f"Already indexed, cannot overwrite ({self.base_path})"
 
         # Set up the wb_folder for the index file to be placed within
-        self.setup_wb_folder()
+        self.populate_folders()
     
         # Create the index object, consisting of
         #  - the folder type (collection or dataset)
@@ -155,7 +152,7 @@ class Dataset:
         self.index = dict(
             uuid=str(uuid.uuid4()),
             indexed_at=self.timestamp.encode(),
-            name=self.path.rsplit("/", 1)[-1],
+            name=self.base_path.rsplit("/", 1)[-1],
             description=""
         )
 
@@ -182,7 +179,7 @@ class Dataset:
 
         # Write the params object to the appropriate path for the asset type
         self.write_json(
-            self.filelib.path_join(asset_type, "params.json"),
+            self.wb_path(asset_type, "params.json"),
             params,
             indent=indent,
             sort_keys=sort_keys,
@@ -194,7 +191,7 @@ class Dataset:
 
         # Write the params object to the appropriate path for the asset type
         return self.read_json(
-            self.filelib.path_join(asset_type, "params.json")
+            self.wb_path(asset_type, "params.json")
         )
 
     def write_asset_env(self, asset_type, env, overwrite=False):
@@ -210,7 +207,7 @@ class Dataset:
 
         # Write the params object to the appropriate path for the asset type
         self.write_text(
-            self.filelib.path_join(asset_type, "env"),
+            self.wb_path(asset_type, "env"),
             env_script,
             overwrite=overwrite
         )
@@ -257,21 +254,25 @@ class Dataset:
         children_uuids = list()
 
         # Iterate over all of the paths inside this folder
-        for subfolder in self.filelib.listdir(self.path):
+        for subfolder in self.listdir():
+
+            # Skip the ._wb/ folder
+            if subfolder == "._wb":
+                continue
 
             # Construct the complete path to the subfolder
-            subfolder = self.filelib.abs_path(
-                self.filelib.path_join(
-                    self.path,
-                    subfolder
-                )
-            )
+            subfolder = self.path(subfolder)
 
             # If it is a directory
             if self.filelib.isdir(subfolder):
 
                 # Get the index of the subfolder, if any exists
-                ds = Dataset(subfolder)
+                ds = Dataset(
+                    base_path=subfolder,
+                    filelib=self.filelib,
+                    verbose=self.verbose,
+                    logger=self.logger
+                )
 
                 # If the subfolder has an index
                 if ds.index is not None:
@@ -285,7 +286,7 @@ class Dataset:
         """Launch the tool which has been configured for this dataset."""
 
         subprocess.Popen(
-            ["/bin/bash", self.filepath("helpers/run_launcher")],
+            ["/bin/bash", self.wb_path("helpers/run_launcher")],
             start_new_session=True,
-            cwd=self.path
+            cwd=self.base_path
         )
