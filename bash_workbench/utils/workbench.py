@@ -196,15 +196,20 @@ class Workbench(FolderHierarchyBase):
                     seen_folders.add(subpath)
 
                     # Emit this Dataset
-                    yield Dataset(
-                        base_path=subpath,
-                        verbose=self.verbose,
-                        filelib=self.filelib,
-                        logger=self.logger
-                    )
+                    yield self.dataset(subpath)
 
                     # Add the subpath to the list of paths to check next
                     folders_to_check.append(subpath)
+
+    def dataset(self, path) -> Dataset:
+        """Generate a Dataset object for a particular path."""
+
+        return Dataset(
+            base_path=path,
+            verbose=self.verbose,
+            filelib=self.filelib,
+            logger=self.logger
+        )
 
     def link_to_home(self, path):
         """Add a symlinnk of a path to the home directory."""
@@ -932,6 +937,9 @@ class Workbench(FolderHierarchyBase):
         # Delete the repository
         self.log(f"Deleting repository {name}")
         repo.delete()
+
+        # Remove the repository from the list of repositories
+        del self.repositories[name]
 
     def is_simple_name(self, name):
         """Check that a name contains only alphanumeric and underscores."""

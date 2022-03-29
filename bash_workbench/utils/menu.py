@@ -41,7 +41,7 @@ class WorkbenchMenu:
         self.wb.log(sys.version_info)
         self.wb.log(f"BASH Workbench: {bash_workbench.__version__}")
 
-    def questionary(self, fname, msg, **kwargs):
+    def questionary(self, fname, msg, **kwargs) -> str:
         """Wrap questionary functions to catch escapes and exit gracefully."""
 
         # Get the questionary function
@@ -111,13 +111,13 @@ class WorkbenchMenu:
         """
 
         # If this is the home directory of the workbench
-        if self.cwd == self.wb.home_folder:
+        if self.cwd == self.wb.base_path:
 
             # It does not need to be indexed
             return
 
         # Try to read an index for the cwd, if one exists
-        ds = Dataset(self.cwd)
+        ds = self.wb.dataset(self.cwd)
 
         # If an index does not exist
         if ds.index is None:
@@ -151,10 +151,10 @@ class WorkbenchMenu:
         self.check_indexed_cwd()
 
         # If this is not the home directory
-        if self.cwd != self.wb._top_level_folder("data"):
+        if self.cwd != self.wb.path("data"):
 
             # Get the dataset information
-            ds = Dataset(self.cwd)
+            ds = self.wb.dataset(self.cwd)
 
             # Show the name as a header
             self.print_header(f"Dataset: {ds.index.get('name', self.cwd)}")
@@ -256,7 +256,7 @@ class WorkbenchMenu:
         """Edit the name and/or description for a dataset."""
 
         # Read the dataset index
-        ds = Dataset(self.cwd)
+        ds = self.wb.dataset(self.cwd)
 
         # Prompt for the name and description
         for k in ["name", "description"]:
@@ -488,7 +488,7 @@ class WorkbenchMenu:
         """Set up an asset (tool or launcher)."""
 
         # Make a Dataset object
-        ds = Dataset(self.cwd)
+        ds = self.wb.dataset(self.cwd)
 
         # Make sure that the asset type is valid
         ds.validate_asset_type_format(asset_type)
@@ -533,7 +533,7 @@ class WorkbenchMenu:
         """Select an asset and set it up for a dataset."""
 
         # Make a Dataset object
-        ds = Dataset(self.cwd)
+        ds = self.wb.dataset(self.cwd)
 
         # Make sure that the asset type is valid
         ds.validate_asset_type_format(asset_type)
@@ -600,7 +600,7 @@ class WorkbenchMenu:
         """Populate the params for an asset in a dataset."""
 
         # Make a Dataset object
-        ds = Dataset(self.cwd)
+        ds = self.wb.dataset(self.cwd)
 
         # Get the name of the tool/launcher which has been set up
         asset_name = ds.index.get(asset_type)
@@ -767,20 +767,8 @@ class WorkbenchMenu:
         for repo in local_repos:
             options.append(
                 (
-                    f"Manage downloaded repository {repo}",
-                    lambda: self.manage_downloaded_repo(repo)
-                )
-            )
-
-        # Get the list of repositories which have been linked
-        linked_repos = self.wb.list_linked_repos()
-
-        # Add an option for each of the linked repositories
-        for repo in linked_repos:
-            options.append(
-                (
-                    f"Manage linked repository {repo}",
-                    lambda: self.manage_linked_repo(repo)
+                    f"Manage repository {repo}",
+                    lambda: self.manage_repo(repo)
                 )
             )
 
@@ -821,6 +809,12 @@ class WorkbenchMenu:
             only_directories=True
         )
 
+        # If the user selected the home folder
+        if repo_fp.startswith("~"):
+
+            # Replace it with the complete home folder
+            repo_fp = repo_fp.replace("~", self.wb.filelib.home())
+
         # If the user is not sure
         if not self.questionary(
             "confirm",
@@ -842,7 +836,7 @@ class WorkbenchMenu:
         # Back to the repository menu
         self.manage_repositories_menu()
 
-    def manage_downloaded_repo(self, repo_name):
+    def manage_repo(self, repo_name):
         """Manage a downloaded repository."""
 
         # Ask the user what to do
@@ -851,51 +845,10 @@ class WorkbenchMenu:
             choices=[
                 ("Update to latest version", lambda: self.update_local_repo(repo_name)),
                 ("Switch branch", self.local_repo_switch_branch(repo_name)),
-                ("Delete local copy", self.delete_local_repo(repo_name)),
+                ("Remove repository", self.remove_repo(repo_name)),
                 ("Back", self.manage_repositories_menu)
             ]
         )
-
-    def manage_linked_repo(self, repo_name):
-        """Manage a linked repository."""
-
-        # Get the path which is linked
-        linked_path = self.wb.filelib.abs_path(
-            self.wb._top_level_file(
-                folder_name="linked_repositories",
-                file_name=repo_name
-            )
-        )
-
-        # Ask the user what to do
-        self.select_func(
-            f"Linked repository: {repo_name} -> {linked_path}",
-            [
-                ("Remove link", lambda: self.unlink_repo(repo_name)),
-                ("Back", self.manage_repositories_menu)
-            ]
-        )
-
-    def unlink_repo(self, repo_name):
-        """Remove a link to a local repository."""
-
-        # If the user is not sure
-        if not self.questionary(
-            "confirm",
-            f"Confirm - remove link to repository '{repo_name}'"
-        ):
-
-            # Go back to the repository menu
-            self.manage_repositories_menu()
-
-        # Try to unlink the repository
-        try:
-            self.wb.unlink_local_repo(name=repo_name)
-        except Exception as e:
-            self.print_line(f"ERROR: {str(e)}")
-
-        # Go back to the repository menu
-        self.manage_repositories_menu()
 
     def update_local_repo(self, repo_name):
         """Update a local repository to the most recent version."""
@@ -918,13 +871,13 @@ class WorkbenchMenu:
         # Go back to the repository menu
         self.manage_repositories_menu()
 
-    def delete_local_repo(self, repo_name):
+    def remove_repo(self, repo_name):
         """Delete the local copy of a downloaded repository."""
 
         # If the user is not sure
         if not self.questionary(
             "confirm",
-            f"Confirm - delete local copy of repository {repo_name}"
+            f"Confirm - remove repository {repo_name}"
         ):
 
             # Go back to the repository menu
