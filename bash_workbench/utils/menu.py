@@ -1,11 +1,10 @@
 # Import the Workbench class to specify input type
-from cgitb import text
 from .workbench import Workbench
-from .dataset import Dataset
 from .asset import Asset
 from .utils import convert_size
 from .params_menu import ParamsMenu
 import questionary
+import json
 import sys
 import textwrap
 import bash_workbench
@@ -184,6 +183,7 @@ class WorkbenchMenu:
                 ("Edit Dataset", self.modify_dataset_menu),
                 ("Explore Datasets", self.explore_datasets_menu),
                 ("Browse Tools", self.browse_tool_menu),
+                ("Browse Launchers", self.browse_launcher_menu),
                 ("Manage Repositories", self.manage_repositories_menu),
                 ("Return to Shell", self.exit)
             ]
@@ -350,19 +350,124 @@ class WorkbenchMenu:
     def _browse_asset_menu(self, asset_type):
         """Show the user the set of assets which are available."""
 
-        # Make a list of the assets of this type which are available
-        asset_dict = {
-            asset_name: Asset(WB=self.wb, asset_type=asset_type, asset_name=asset_name)
-            for asset_name in self.wb._list_assets(asset_type)
-        }
+        # The selection scheme used below only works if repo_name does not contain a '/'
+        # and asset_name does not contain a ": "
 
-        # Format a list of strings using the key, name, and description
+        # Format a list of strings using the repository, asset key, name, and description
         choices = [
-            f"{asset_name}: {asset.config['name']}\n{asset.config['description']}"
-            for asset_name, asset in asset_dict.items()
+            f"{repo_name}/{asset_name}: {asset.config['name']}\n{asset.config['description']}"
+            for repo_name, repo in self.wb.repositories.items()
+            for asset_name, asset in repo.assets.get(asset_type, []).items()
         ]
 
         # Sort the list alphabetically
+        choices.sort()
+
+        # Add the option to go back
+        choices.append("Back")
+
+        # Get the selction
+        selection = self.questionary(
+            "select",
+            f"Select a {asset_type}",
+            choices=choices
+        )
+
+        # If the user decided to go back
+        if selection == "Back":
+
+            # Go back
+            self.main_menu()
+
+        # If the user selected a tool
+        else:
+
+            # Parse the repository and asset from the selection
+            repo_name, asset_name = selection.split(": ")[0].split("/", 1)
+
+            # Drop the user into the menu used to browse a single asset
+            self._browse_single_asset(
+                asset_type=asset_type,
+                asset_name=asset_name,
+                repo_name=repo_name
+            )
+
+    def _browse_single_asset(
+        self,
+        asset_type=None,
+        asset_name=None,
+        repo_name=None
+    ):
+        """
+        If we can think of any other interesting things to do with
+        individual assets, that can go here. For now, let's just show
+        the user all of the files in the asset.
+        """
+
+        # Make sure that the repo is valid
+        assert repo_name in self.wb.repositories
+
+        # Make sure that the asset type is valid
+        assert asset_type in self.wb.repositories[repo_name].assets
+
+        # Make sure that the asset name is valid
+        assert asset_name in self.wb.repositories[repo_name].assets[asset_type]
+
+        # Get the asset
+        asset = self.wb.repositories[repo_name].assets[asset_type][asset_name]
+
+        # Make a list of the files in the asset folder
+        choices = [
+            f"Show: {fn}"
+            for fn in asset.listdir()
+        ]
+
+        # Also give the user the option to go back to the previous menu
+        choices.append("Back")
+
+        # Select from the options
+        selection = self.questionary(
+            "select",
+            "Display the contents of a file",
+            choices=choices
+        )
+
+        # If the user selected the option to go back
+        if selection == "Back":
+
+            # Go back
+            self._browse_asset_menu(asset_type)
+
+        # Otherwise
+        else:
+
+            # Get the file name from the selection
+            fn = selection.split(": ", 1)[1]
+
+            # If it is a JSON file
+            if fn.endswith(".json") or fn.endswith(".json.gz"):
+
+                # Read the file
+                dat = asset.read_json(fn)
+
+                # Print with JSON indenting
+                print(json.dumps(dat, indent=4))
+                
+            # If not JSON, then straight text
+            else:
+
+                # Read the file
+                dat = asset.read_text(fn)
+
+                # Print it
+                print(dat)
+
+            # Redisplay the menu
+            self._browse_single_asset(
+                asset_type=asset_type,
+                asset_name=asset_name,
+                repo_name=repo_name
+            )
 
     def create_subfolder_menu(self):
         """Create a subfolder inside the current folder."""
@@ -842,10 +947,10 @@ class WorkbenchMenu:
         # Ask the user what to do
         self.select_func(
             f"Local copy of downloaded repository: {repo_name}",
-            choices=[
+            [
                 ("Update to latest version", lambda: self.update_local_repo(repo_name)),
-                ("Switch branch", self.local_repo_switch_branch(repo_name)),
-                ("Remove repository", self.remove_repo(repo_name)),
+                ("Switch branch", lambda: self.local_repo_switch_branch(repo_name)),
+                ("Remove repository", lambda: self.remove_repo(repo_name)),
                 ("Back", self.manage_repositories_menu)
             ]
         )

@@ -1,6 +1,9 @@
 from .asset import Asset
+from typing import Dict
 from .folder_hierarchy import FolderHierarchyBase
 import git
+
+AssetDict = Dict[str, Asset]
 
 class Repository(FolderHierarchyBase):
     """Define the location of assets inside a repository."""
@@ -31,7 +34,7 @@ class Repository(FolderHierarchyBase):
         # if it is a valid git repository
         self.setup_repo()
 
-    def read_assets(self, asset_type=None) -> dict:
+    def read_assets(self, asset_type=None) -> AssetDict:
         """Read the assets present in a subfolder, if they exist."""
 
         assert asset_type is not None

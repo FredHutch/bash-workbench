@@ -1,3 +1,4 @@
+import gzip
 import json
 import os
 import shutil
@@ -65,17 +66,24 @@ def getcwd():
     """Return the current working directory."""
     return os.getcwd()
 
-def chdir(path):
+def chdir(path:str):
     """Change working directories."""
     os.chdir(path)
 
-def read_json(path):
+def read_json(path:str):
     """Read a file in JSON format."""
 
     assert os.path.exists(path), f"Cannot read JSON, file does not exist {path}"
 
-    with open(path, 'r') as handle:
-        return json.load(handle)
+    if path.endswith(".gz"):
+
+        with gzip.open(path, 'rt') as handle:
+            return json.load(handle)
+
+    else:
+
+        with open(path, 'r') as handle:
+            return json.load(handle)
 
 def write_json(dat, path, **kwargs):
     """Write a file in JSON format."""
@@ -83,13 +91,19 @@ def write_json(dat, path, **kwargs):
     with open(path, mode='w') as handle:
         json.dump(dat, handle, **kwargs)
 
-def read_text(path):
+def read_text(path:str):
     """Read a text file."""
 
     assert os.path.exists(path), f"Cannot read text, file does not exist {path}"
 
-    with open(path, mode='r') as handle:
-        return handle.read()
+    if path.endswith(".gz"):
+
+        with gzip.open(path, mode='rt') as handle:
+            return handle.read()
+
+    else:
+        with open(path, mode='r') as handle:
+            return handle.read()
 
 def write_text(dat, path):
     """Write a text file."""

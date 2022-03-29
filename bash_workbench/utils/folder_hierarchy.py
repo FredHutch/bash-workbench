@@ -148,6 +148,18 @@ class FolderHierarchyBase:
             *list(subfolder_list)
         )
 
+    def read_json(self, *subfolder_list):
+
+        return self.filelib.read_json(
+            self.path(*subfolder_list)
+        )
+
+    def read_text(self, *subfolder_list) -> str:
+
+        return self.filelib.read_text(
+            self.path(*subfolder_list)
+        )
+
     def exists(self, *subfolder_list) -> bool:
         """Check whether a subfolder (or file) exists."""
 
