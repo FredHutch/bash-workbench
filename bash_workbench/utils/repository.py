@@ -79,6 +79,7 @@ class Repository(FolderHierarchyBase):
 
                 self.log(f"Trying to read local repository")
                 self.repo = git.Repo(self.base_path)
+                self.log(f"Successfully read local repository")
 
             # If the repository is not set up
             except git.InvalidGitRepositoryError as e:
