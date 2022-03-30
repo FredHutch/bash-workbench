@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from distutils.core import setup
-import bash_workbench
+from . import bash_workbench
 
 # Read the requirements from requirements.txt
 with open("requirements.txt", "rt") as handle:
