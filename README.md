@@ -6,7 +6,50 @@ The world is awash in data, but research communities tend to organize their data
 The BASH Workbench is a dataset manager for people who tend to organize their data as collections of files.
 The goal of this utility is to make it easier to keep track of where your datasets are, remember how they were made, and quickly create new ones based on easily-sharable BASH templates.
 
-## Motivated by Bioinformatics
+## Guide
+
+- [Getting Started](#getting-started)
+- [Background](#background)
+- [Key Concepts](#key-concepts)
+- [Developer's Guide](#developers-guide)
+- [Contributing](#contributing)
+
+## Getting Started
+
+The BASH Workbench may be installed using Python3 with the following command:
+
+```#!/bin/bash
+pip3 install git+https://github.com/FredHutch/bash-workbench.git
+```
+
+Note: The BASH Workbench was developed using Python 3.9 but will likely work with earlier versions of Python3.
+
+The BASH Workbench can be run in two different ways:
+- As an interactive "choose-your-own-adventure" style series of menus, or
+- using a command-line interface for each individual command.
+
+To start exploring the interactive menus, simply run the command:
+
+```#!/bin/bash
+wb
+```
+
+The command-line interface for running individual components of the BASH
+Workbench can be run using the same command with additional sub-commands.
+For example, the following command will download the
+[bash-workbench-tools](https://github.com/FredHutch/bash-workbench-tools)
+repository and import all of its **tools** and **launchers**.
+
+```#!/bin/bash
+wb add_repo --remote-name FredHutch/bash-workbench-tools
+```
+
+For a complete list of sub-commands available, print the help text (`wb --help`)
+or use the tab key to populate a list of options.
+
+## Background
+
+### Motivated by Bioinformatics
 
 The number of technologies available for organizing data are far too numerous to mention, but none of them quite fit the needs of bioinformaticians.
 While the world of bioinformatics is broad, its most common theme is that datasets are large and do not adhere to strict formats or structures.
@@ -58,7 +101,7 @@ When using a **tool** or **launcher**, a user may want to re-use the settings or
 Some examples of **parameters** that a user may wish to save and re-use with the BASH Workbench may be the location of a folder
 used to save temporary files, or the username associated with a SLURM account.
 
-## Implementation
+## Developers Guide
 
 The BASH Workbench makes it easier to manage and manipulate an existing filesystem, and does not require that any data is moved to a dedicated location.
 By using a dedicated subfolder `._wb/` (for 'workbench'), the Workbench can annotate any existing folder and store associated metadata in-place.
@@ -94,19 +137,40 @@ Useful elements of the folder attributes JSON may include:
 
 ### Home Folder
 
-The environment of each user is managed by updating the contents of
-the folder `$HOME/._workbench/`.
-The first subdirectory in `$HOME/._workbench/` contains a `profile` folder (default: `$HOME/._workbench/default/`).
-A single user can create additional `profile` folders (e.g. `$HOME/._workbench/demo`) to maintain alternate environments in the Workbench containing completely different **datasets**, **tools** and **launchers**.
+The environment of each user is managed by updating the contents of their `HOME_FOLDER`.
+By default, the `HOME_FOLDER` for each user is located inside the home directory within
+the folder `~/._workbench/default/`.
+
+The location of the BASH Workbench `HOME_FOLDER` may be modified using two variables:
+- The "base folder" (default: `~/.workbench`) may be modified with the command line flag `--base-folder` or the environment variable `$WB_BASE`; and
+- The "profile" (default: `default`) which may be modified with the command line flag `--profile` or the environment variable `$WB_PROFILE`. 
+
+In both cases the command line flag takes precedence over the environment variable.
+
+This configuration is intended to allow a single user can create additional `profile` 
+folders (e.g. `$HOME/._workbench/demo`) to maintain alternate environments in the 
+Workbench containing different sets of **datasets**, **tools** and **launchers**.
 
 The profile home folder contains:
 
- - `data/`: Contains symlinks to the **datasets** which are
- at the root of the dataset hierarchy;
+ - `data/`: Contains symlinks to the **datasets** which may be located in different
+ parts of a larger filesystem;
  - `params/`: Contains the saved settings used to run any **tools** or **launchers**.
  - `repositories/`: Contains any external code repositories which
  contain **tools** and **launchers** that have been imported
  by the user.
+
+### Repositories
+
+All of the **tools** and **launchers** used by the BASH Workbench are intended to
+be saved and shared in code repositories.
+Any code repository may be used for this purpose by adding content to the top-level
+directories `._wb/tool/` and/or `._wb/launcher/`.
+Repositories can be added to the BASH Workbench for a single user by using built-in
+utilities provided for either:
+- (a) cloning a repository directly to the `<HOME>/repositories/` folder, or
+- (b) creating a symlink in `<HOME>/repositories/` to a repository which has previously
+been cloned to another location in the filesystem.
 
 ### Tools
 
@@ -114,31 +178,53 @@ Each tool must consist of (1) a JSON file defining the files and parameters used
 Each of those files are located within a **repository** folder under the `tool/` folder in a subfolder named for the tool.
 
 ```
-$HOME/._workbench/<PROFILE>/repositories/<REPO_NAME>/tool/<TOOL_NAME>/config.json
-$HOME/._workbench/<PROFILE>/repositories/<REPO_NAME>/tool/<TOOL_NAME>/run.sh
+<HOME_FOLDER>/repositories/<REPO_NAME>/._wb/tool/<TOOL_NAME>/config.json
+<HOME_FOLDER>/repositories/<REPO_NAME>/._wb/tool/<TOOL_NAME>/run.sh
 ```
 
 ### Launchers
 
-Each launcher must consist of (1) a JSON file defining the files and parameters used as input (`config.json`), and (2) an executable script which invokes a tool script appropriately, based on those inputs (`run.sh`).
+Each launcher must consist of (1) a JSON file defining the files and parameters used as input (`config.json`), and (2) an executable script which invokes the helper script `run_tool`, which invokes the tool's run script while capturing all logs and error messages.
 Each of those files are located within a **repository** folder under the `launcher/` folder in a subfolder named for the launcher.
 
 ```
-$HOME/._workbench/<PROFILE>/repositories/<REPO_NAME>/launcher/<LAUNCHER_NAME>/config.json
-$HOME/._workbench/<PROFILE>/repositories/<REPO_NAME>/launcher/<LAUNCHER_NAME>/run.sh
+<HOME_FOLDER>/repositories/<REPO_NAME>/._wb/launcher/<LAUNCHER_NAME>/config.json
+<HOME_FOLDER>/repositories/<REPO_NAME>/._wb/launcher/<LAUNCHER_NAME>/run.sh
 ```
 
-### Sharing Tools and Launchers
+### Referencing Tools and Launchers
 
-Any external code repository which contains a hidden folder `._wb/` may be used to host **tools** and **launchers**.
+When a **repository** has been cloned by the BASH Workbench, it will be referenced
+by a combination of the organization and repository names (in case there are two
+repositories with the same name from two different organizations). For example,
+the repository [FredHutch/bash-workbench-tools](https://github.com/FredHutch/bash-workbench-tools)
+will be cloned to `<HOME_FOLDER>/repositories/FredHutch_bash-workbench-tools`
+and referenced by the user with the name `FredHutch_bash-workbench-tools`.
 
-Repositories can be sourced either from GitHub or by linking to a local repository.
+When a **repository** has been linked into the BASH Workbench from another location
+in the filesystem, the user may select any name for it to be referenced by.
 
-When a repository is downloaded from GitHub, it is placed in a folder named for both the organization and repository.
-For example, when a user downloads the repository [FredHutch/bash-workbench-tools](https://www.github.com/FredHutch/bash-workbench-tools) it will be located in `$HOME/._workbench/<PROFILE>/repositories/FredHutch_bash-workbench-tools` and referenced as `FredHutch_bash-workbench-tools`.
+Each **tool** or **launcher** is referenced by a combination of its repository and name.
 
-Each **tool** or **launcher** is referenced by its repository and name.
-
-For example, when a user runs the **tool** `FredHutch_bash-workbench-tools/make_tar_gz`, it will reference the tool which is configured within `$HOME/._workbench/<PROFILE>/repositories/FredHutch_bash-workbench-tools/._wb/tool/make_tar_gz/`
+For example, when a user runs the **tool** `FredHutch_bash-workbench-tools/make_tar_gz`, it will reference the tool which is configured within `<HOME_FOLDER>/repositories/FredHutch_bash-workbench-tools/._wb/tool/make_tar_gz/`
 
 With this approach, it should be possible to distribute the **tools** and **launchers** needed to run a particular analysis by anyone using the BASH Workbench.
+
+## Contributing
+
+The BASH Workbench is intended to be an open project which benefits a broad community
+of users. Contributions are welcome from any developer in the form of PRs on
+[this](https://github.com/FredHutch/bash-workbench) repository.
+If you have an interest in contributing, please get in touch or start an
+[issue](https://github.com/FredHutch/bash-workbench/issues) to discuss and make
+sure that the contribution fits into the larger development landscape.
+
+The major areas in which this project could helpfully be supported moving forward
+include:
+
+- Configuring additional repositories with **tools** and **launchers** which are most useful to users;
+- Adding support for more convenient user interfaces, e.g. a textual user interface
+built on something like [npyscreen](https://npyscreen.readthedocs.io/) or [textual](https://github.com/Textualize/textual/);
+- Adding support for other filesystems, e.g. cloud computing platforms, both in
+terms of stand-along **launchers** as well as built-in adapters for managing
+**datasets** located in object storage.
