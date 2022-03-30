@@ -14,9 +14,10 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
       
-      - name: Install code
+      - name: set up Python3
         uses: actions/setup-python@v3
-        run: pip3 install --user ./
+      - name: install
+        run: pip3 install ./
 
-      - name: Test
+      - name: test
         run: bats tests/cli.bats
