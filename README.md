@@ -1,6 +1,6 @@
 # BASH Workbench
 
-[![CI](https://github.com/FredHutch/bash-workbench/actions/workflows/ci.yaml/badge.svg)](https://github.com/FredHutch/bash-workbench/actions/workflows/ci.yaml)
+[![CI](https://github.com/FredHutch/bash-workbench/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/FredHutch/bash-workbench/actions/workflows/ci.yaml)
 
 A dataset manager for bioinformaticians
 
