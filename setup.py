@@ -23,7 +23,7 @@ setup(
     license="MIT",
     entry_points={
         'console_scripts': [
-            'wb=bash_workbench.cli.launch:cli'
+            'wb=bash_workbench.launch:cli'
         ],
     },
     install_requires=requirements,

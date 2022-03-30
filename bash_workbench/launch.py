@@ -3,7 +3,7 @@
 
 import argcomplete
 from .args import make_parser
-from .. import utils
+from . import utils
 import json
 import yaml
 import os
