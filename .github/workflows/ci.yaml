@@ -17,7 +17,7 @@ jobs:
       - name: set up Python3
         uses: actions/setup-python@v3
       - name: install
-        run: pip3 install ./
+        run: pip3 install -e ./
 
       - name: test
         run: bats tests/cli.bats
