@@ -2,7 +2,8 @@
 # PYTHON_ARGCOMPLETE_OK
 
 import argcomplete
-import bash_workbench as wb
+from .args import make_parser
+from .. import utils
 import json
 import yaml
 import os
@@ -10,7 +11,7 @@ import os
 def cli():
     
     # Get the base parser for the CLI
-    parser = wb.cli.args.make_parser()
+    parser = make_parser()
 
     # Enable autocomplete
     argcomplete.autocomplete(parser)
@@ -19,7 +20,7 @@ def cli():
     args = parser.parse_args()
 
     # Get the library of functions used to interact with the filesystem
-    filelib = wb.utils.filesystem.__dict__.get(args.filesystem)
+    filelib = utils.filesystem.__dict__.get(args.filesystem)
 
     # If the base_folder field was not provided
     if args.base_folder is None:
@@ -50,13 +51,13 @@ def cli():
     # Get a logger
     # If the user specified a function, output to the screen
     # Either way, append to a log file in the base folder
-    logger = wb.utils.logging.setup_logger(
+    logger = utils.logging.setup_logger(
         log_stdout="func" in args.__dict__,
         log_fp=os.path.join(base_path, ".wb_log"),
     )
 
     # Set up a Workbench object
-    WB = wb.utils.workbench.Workbench(
+    WB = utils.workbench.Workbench(
         base_path=base_path,
         filelib=filelib,
         logger=logger,
@@ -67,7 +68,7 @@ def cli():
     if "func" not in args.__dict__:
 
         # Start the interactive menu
-        wb.utils.menu.WorkbenchMenu(WB)
+        utils.menu.WorkbenchMenu(WB)
 
     # If a command was provided
     else:

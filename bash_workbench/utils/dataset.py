@@ -1,5 +1,5 @@
-import bash_workbench as wb
 from .folder_hierarchy import FolderHierarchyBase
+from .timestamp import Timestamp
 import subprocess
 import uuid
 
@@ -23,7 +23,7 @@ class Dataset(FolderHierarchyBase):
         assert self.filelib.isdir(self.base_path), f"Dataset must be a directory, not {self.base_path}"
 
         # Make a timestamp object
-        self.timestamp = wb.utils.timestamp.Timestamp()
+        self.timestamp = Timestamp()
 
         # If there are files present in this folder which define the
         # properties of the dataset index, tool, or launcher,

@@ -1,9 +1,9 @@
-from bash_workbench.utils.asset import Asset
-from bash_workbench.utils.repository import Repository
-from bash_workbench.utils.dataset import Dataset
-from bash_workbench.utils.datasets import Datasets
-from bash_workbench.utils.folder_hierarchy import FolderHierarchyBase
-from bash_workbench.utils.timestamp import Timestamp
+from .asset import Asset
+from .repository import Repository
+from .dataset import Dataset
+from .datasets import Datasets
+from .folder_hierarchy import FolderHierarchyBase
+from .timestamp import Timestamp
 from importlib_resources import files
 
 class Workbench(FolderHierarchyBase):
