@@ -1,5 +1,7 @@
 # BASH Workbench
 
+[![CI](https://github.com/FredHutch/bash-workbench/actions/workflows/ci.yaml/badge.svg)](https://github.com/FredHutch/bash-workbench/actions/workflows/ci.yaml)
+
 A dataset manager for bioinformaticians
 
 The world is awash in data, but research communities tend to organize their data in different ways.
@@ -209,6 +211,12 @@ Each **tool** or **launcher** is referenced by a combination of its repository a
 For example, when a user runs the **tool** `FredHutch_bash-workbench-tools/make_tar_gz`, it will reference the tool which is configured within `<HOME_FOLDER>/repositories/FredHutch_bash-workbench-tools/._wb/tool/make_tar_gz/`
 
 With this approach, it should be possible to distribute the **tools** and **launchers** needed to run a particular analysis by anyone using the BASH Workbench.
+
+## Testing
+
+To run the test suite configured in `tests/cli.bats`, use the [act](https://github.com/nektos/act)
+utility to run the GitHub Actions (configured in `.github/workflows/ci.yaml`).
+After installing `act`, the testing suite can be invoked with `act push`.
 
 ## Contributing
 
