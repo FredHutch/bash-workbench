@@ -331,14 +331,21 @@ class ParamsMenu:
         # Get the type of value to prompt for
         wb_type = self.config[param_key].get("wb_type")
 
+        assert wb_type is not None, f"Parameter {param_key} must have 'wb_type' defined"
+
         # Get the type of questionary prompt to use
-        questionary_type = dict(
+        questionary_type_dict = dict(
             string="text",
             password="password",
             file="path",
             folder="path",
             select="select"
-        ).get(wb_type)
+        )
+
+        questionary_type = questionary_type_dict.get(wb_type)
+
+        msg = f"Parameter ({param_key}) wb_type ({wb_type}) is not recognized [{', '.join(list(questionary_type_dict))}]"
+        assert questionary_type is not None, msg
 
         # Add wb_type specific options to the questionary prompt
         if wb_type == "folder":
