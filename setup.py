@@ -1,9 +1,21 @@
 #!/usr/bin/env python
 
+import codecs
 from distutils.core import setup
+import os.path
 
-# Define the version of the package
-__version__ = "0.0.1"
+def read(rel_path):
+    here = os.path.abspath(os.path.dirname(__file__))
+    with codecs.open(os.path.join(here, rel_path), 'r') as fp:
+        return fp.read()
+
+def get_version(rel_path):
+    for line in read(rel_path).splitlines():
+        if line.startswith('__version__'):
+            delim = '"' if '"' in line else "'"
+            return line.split(delim)[1]
+    else:
+        raise RuntimeError("Unable to find version string.")
 
 # Read the requirements from requirements.txt
 with open("requirements.txt", "rt") as handle:
@@ -14,7 +26,7 @@ with open("requirements.txt", "rt") as handle:
 
 setup(
     name="bash_workbench",
-    version=__version__,
+    version=get_version("bash_workbench/__init__.py"),
     description="Dataset manager for more reproducible analysis with shell scripts",
     author="Samuel Minot",
     author_email="sminot@fredhutch.org",
