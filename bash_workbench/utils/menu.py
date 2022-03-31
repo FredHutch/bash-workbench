@@ -7,6 +7,7 @@ import questionary
 import json
 import sys
 import textwrap
+from time import sleep
 import bash_workbench
 
 class WorkbenchMenu:
@@ -174,20 +175,50 @@ class WorkbenchMenu:
         # Add a spacer line
         print("\n")
 
+        # Build a list of options
+        options = list()
+
+        # If this is not the home directory
+        if self.cwd != self.wb.path("data"):
+
+            # Add option for running the dataset
+            options.append(
+                ("Run Tool", self.run_tool_menu)
+            )
+
+            # If there is a non-FAILED status
+            if ds.index.get("status", "FAILED") != "FAILED":
+
+                # Add option for refreshing the status
+                options.append(
+                    ("Refresh Status", self.refresh)
+                )
+
+            # If there are any log files available
+            if ds.has_logs():
+
+                # Add option for viewing the logs
+                options.append(
+                    ("View Logs", self.view_logs_menu)
+                )
+
+            # Add option for editing the dataset
+            options.append(
+                ("Edit Dataset", self.modify_dataset_menu)
+            )
+
+        # Add options used for all folders
+        options.extend([
+            ("Explore Datasets", self.explore_datasets_menu),
+            ("Browse Tools", self.browse_tool_menu),
+            ("Browse Launchers", self.browse_launcher_menu),
+            ("Manage Repositories", self.manage_repositories_menu),
+            ("Return to Shell", self.exit)
+        ])
+
         # Select a submenu
         # The user selection will run a function
-        self.select_func(
-            """Would you like to:""",
-            [
-                ("Run Tool", self.run_tool_menu),
-                ("Edit Dataset", self.modify_dataset_menu),
-                ("Explore Datasets", self.explore_datasets_menu),
-                ("Browse Tools", self.browse_tool_menu),
-                ("Browse Launchers", self.browse_launcher_menu),
-                ("Manage Repositories", self.manage_repositories_menu),
-                ("Return to Shell", self.exit)
-            ]
-        )
+        self.select_func("Would you like to:", options)
 
     def modify_dataset_menu(self):
         """Menu options for modifying the current working directory."""
@@ -355,7 +386,7 @@ class WorkbenchMenu:
 
         # Format a list of strings using the repository, asset key, name, and description
         choices = [
-            f"{repo_name}/{asset_name}: {asset.config['name']}\n{asset.config['description']}"
+            f"{repo_name}/{asset_name}: {asset.config['name']}\n      {asset.config['description']}\n"
             for repo_name, repo in self.wb.repositories.items()
             for asset_name, asset in repo.assets.get(asset_type, []).items()
         ]
@@ -583,6 +614,15 @@ class WorkbenchMenu:
             # Run the dataset
             self.wb.run_dataset(path=self.cwd)
 
+            self.print_line("The dataset has started running!")
+            for _ in range(5):
+                self.print_line(".")
+                sleep(0.1)
+
+            # Update the status of the dataset
+            self.wb.dataset(self.cwd).read_index()
+            self.print_line("Refresh to view the status")
+
         # Return to the main menu
         self.main_menu()
 
@@ -621,7 +661,7 @@ class WorkbenchMenu:
             # Ask the user if they want to replace this asset
             # or keep it
             self.select_func(
-                f"Previously selected {asset_type}: {asset_name}",
+                f"Previously selected {asset_type}:\n  - {asset_name}\n   ",
                 [
                     (
                         f"Run previously selected {asset_type}",
@@ -1166,3 +1206,53 @@ class WorkbenchMenu:
 
         # Back to the previous menu
         self.add_remove_filters()
+
+    def refresh(self):
+        """Refresh the status of the current dataset."""
+
+        # Re-read the index
+        self.wb.dataset(self.cwd).read_index()
+
+        # Go back to the main menu
+        self.main_menu()
+
+    def view_logs_menu(self):
+        """Provide options to view the logs present in a dataset."""
+
+        # Get the dataset information
+        ds = self.wb.dataset(self.cwd)
+
+        # Build a list of choices
+        choices = [
+            f"View {log_type}"
+            for log_type in ds.log_types()
+        ] + [
+            "Back"
+        ]
+
+        # Get the user's selection
+        selection = self.questionary(
+            "select",
+            "Select type of logs to display",
+            choices=choices
+        )
+
+        # If they are done
+        if selection == "Back":
+
+            # Go back to the main menu
+            self.main_menu()
+
+        # Otherwise
+        else:
+
+            # Get the log type
+            log_type = selection.split(" ", 1)[1]
+
+            # Print the log type
+            print(
+                ds.read_logs(log_type)
+            )
+
+            # Re-display the same menu
+            self.view_logs_menu()

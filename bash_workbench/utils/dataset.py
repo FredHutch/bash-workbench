@@ -1,3 +1,4 @@
+from typing import List
 from .folder_hierarchy import FolderHierarchyBase
 from .timestamp import Timestamp
 import subprocess
@@ -135,6 +136,13 @@ class Dataset(FolderHierarchyBase):
         """Return the path to a file in the ._wb/."""
 
         return self.path("._wb", *subfolder_list)
+
+    def wb_path_exists(self, *subfolder_list) -> bool:
+        """Boolean indicating whether a file in the ._wb/ folder eixsts."""
+
+        return self.filelib.exists(
+            self.path("._wb", *subfolder_list)
+        )
 
     def create_index(self):
         """Add an index to a folder."""
@@ -282,7 +290,7 @@ class Dataset(FolderHierarchyBase):
 
         return children_uuids
 
-    def run(self):
+    def run(self) -> None:
         """Launch the tool which has been configured for this dataset."""
 
         subprocess.Popen(
@@ -290,3 +298,29 @@ class Dataset(FolderHierarchyBase):
             start_new_session=True,
             cwd=self.base_path
         )
+
+    def has_logs(self) -> bool:
+        """Boolean indicating whether any log files exist."""
+
+        return len(self.log_types()) > 0
+
+    def log_types(self) -> List[str]:
+        """Return the types of logs available."""
+
+        return [
+            fn
+            for fn in [
+                "output",
+                "error",
+                "log"
+            ]
+            if self.wb_path_exists(f"{fn}.txt")
+        ]
+
+    def read_logs(self, log_type) -> str:
+        """Read one of the log files."""
+
+        msg = f"Does not contain logs: {log_type}"
+        assert self.wb_path_exists(f"{log_type}.txt"), msg
+
+        return self.read_text("._wb", f"{log_type}.txt")
