@@ -511,9 +511,11 @@ class Workbench(FolderHierarchyBase):
         # Instantiate a Dataset object
         ds = self.datasets.from_path(path)
 
-        msg = f"path must indicate an already-indexed folder"
-        assert ds.index is not None, msg
+        # If the dataset is not indexed
+        if ds.index is None:
 
+            # Add an index
+            self.datasets.add(ds)
 
         # Instantiate the tool and launcher, and copy assets to the dataset
         self.log(f"Using tool {tool} for analysis")
