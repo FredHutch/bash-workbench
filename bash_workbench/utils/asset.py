@@ -31,6 +31,17 @@ class Asset(FolderHierarchyBase):
         # Validate that the asset is configured correctly
         self.validate_config()
 
+        # Record the location of the repository which this asset is found in
+        # To find this path, we will go up three levels in the file hierarchy,
+        # since every asset is found in REPO/._wb/ASSET_TYPE/ASSET_NAME
+        self.repo_path = self.filelib.dirname(
+            self.filelib.dirname(
+                self.filelib.dirname(
+                    self.base_path
+                )
+            )
+        )
+
     def validate_config(self):
         """Validate that the tool or launcher is configured correctly"""
 
@@ -72,3 +83,9 @@ class Asset(FolderHierarchyBase):
             # Otherwise, copy those files to the dataset folder
             self.log(f"Copying {fp} to {dest_path}")
             self.filelib.copyfile(fp, dest_path)
+
+        # Record the location of the repository in the dataset
+        dataset.set_attribute(
+            f"{self.asset_type}_repo",
+            self.repo_path
+        )

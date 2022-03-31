@@ -572,6 +572,9 @@ class Workbench(FolderHierarchyBase):
         # Populate a dict with the environment variables that will be set
         env = dict()
 
+        # Add the path to the repository which contains the tool
+        env[f"{asset_type}_REPO"] = ds.index.get(f"{asset_type}_repo")
+
         # Iterate over the arguments in the configuration
         for param_name, param_def in asset_config["args"].items():
 
