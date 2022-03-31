@@ -347,7 +347,7 @@ class WorkbenchMenu:
 
         self._browse_asset_menu("launcher")
 
-    def _browse_asset_menu(self, asset_type):
+    def _prompt_user_to_select_asset(self, asset_type):
         """Show the user the set of assets which are available."""
 
         # The selection scheme used below only works if repo_name does not contain a '/'
@@ -367,11 +367,18 @@ class WorkbenchMenu:
         choices.append("Back")
 
         # Get the selction
-        selection = self.questionary(
+        return self.questionary(
             "select",
             f"Select a {asset_type}",
             choices=choices
         )
+
+    def _browse_asset_menu(self, asset_type):
+        """Show the user the set of assets which are available."""
+
+        # Present the user with a list of assets and get their response
+        # If they want to select none, they can use the "Back" option provided
+        selection = self._prompt_user_to_select_asset(asset_type)
 
         # If the user decided to go back
         if selection == "Back":
@@ -643,36 +650,21 @@ class WorkbenchMenu:
         # Make sure that the asset type is valid
         ds.validate_asset_type_format(asset_type)
 
-        # Make a list of the assets of this type which are available
-        asset_dict = {
-            asset_name: Asset(WB=self.wb, asset_type=asset_type, asset_name=asset_name)
-            for asset_name in self.wb._list_assets(asset_type)
-        }
+        # Present the user with a list of assets and get their response
+        # If they want to select none, they can use the "Back" option provided
+        selection = self._prompt_user_to_select_asset(asset_type)
 
-        # Format a list of strings using the key and name
-        choices = [
-            f"{asset_name}: {asset.config['name']}"
-            for asset_name, asset in asset_dict.items()
-        ]
+        # If the user decided to go back
+        if selection == "Back":
 
-        # Also give the user an opportunity to bail
-        choices = choices + ["Back to main menu"]
-
-        # At this point, the user must select an {asset_type} to run
-        selected_asset = self.questionary(
-            "select",
-            f"Select {asset_type}",
-            choices=choices
-        )
-
-        # If the user bailed
-        if selected_asset == "Back to main menu":
-
-            # Go back to the main menu
+            # Go back
             self.main_menu()
 
         # Otherwise
         else:
+
+            # Parse the repository and asset from the selection
+            repo_name, asset_name = selection.split(": ")[0].split("/", 1)
 
             # If the asset has already been set up
             if ds.__dict__.get(asset_type) is not None:
@@ -680,16 +672,22 @@ class WorkbenchMenu:
                 # Delete the previously set-up asset
                 ds.delete_asset_folder(asset_type)
 
-            self.print_line(f"Selected {asset_type} = {selected_asset}")
-
-            # Remove the description
-            selected_asset = selected_asset.split(": ", 1)[0]
+            self.print_line(f"Selected {asset_type} = {repo_name}/{asset_name}")
 
             # Set up that asset in the folder
-            asset_dict[selected_asset].copy_to_dataset(ds, overwrite=True)
+            self.wb.repositories[
+                repo_name
+            ].assets[
+                asset_type
+            ][
+                asset_name
+            ].copy_to_dataset(
+                ds,
+                overwrite=True
+            )
 
             # Set the name of the asset
-            ds.set_attribute(asset_type, selected_asset)
+            ds.set_attribute(asset_type, f"{repo_name}/{asset_name}")
 
     def dataset_tool_params_menu(self):
         """Populate the params for a tool in a dataset."""
@@ -716,15 +714,21 @@ class WorkbenchMenu:
             # Choose one
             self.print_line(f"No {asset_name} has been set up yet")
             self._choose_asset(asset_type)
+
+            # Get the name of the tool/launcher which has now been set up
+            asset_name = ds.index.get(asset_type)
         
-        # If an asset has been set up
+        # Parse the repository name and asset name
+        repo_name, asset_name = asset_name.split("/", 1)
 
         # Get the configuration for this asset
-        asset_config = Asset(
-            WB=self.wb,
-            asset_type=asset_type,
-            asset_name=asset_name
-        ).config
+        asset_config = self.wb.repositories[
+            repo_name
+        ].assets[
+            asset_type
+        ][
+            asset_name
+        ].config
 
         # If there are no arguments which need to be set up
         if len(asset_config["args"]) == 0:
