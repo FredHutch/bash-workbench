@@ -185,7 +185,9 @@
   export WB_PROFILE=test
 
   # List the basic set of launchers available from the package
-  [ $(wb list_launchers | jq 'length') == 1 ]
+  LAUNCHERS=$(wb list_launchers)
+  echo "${LAUNCHERS}"
+  [ $(echo "${LAUNCHERS}" | jq 'length') == 2 ]
 
 }
 
