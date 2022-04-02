@@ -1,3 +1,4 @@
+from typing import List
 from .asset import Asset
 from .repository import Repository
 from .dataset import Dataset
@@ -50,8 +51,8 @@ class Workbench(FolderHierarchyBase):
         # Parse all of the datasets contained within data/
         self.datasets = Datasets(self)
 
-        # Get the folder which contains assets installed with this package
-        self.assets_folder = files("bash_workbench").joinpath('assets')
+        # Get the folder which contains helpers installed with this package
+        self.helpers_folder = files("bash_workbench").joinpath('helpers')
         
     def _run_function(self, func, **kwargs):
         """Execute a function with the specified name."""
@@ -448,11 +449,6 @@ class Workbench(FolderHierarchyBase):
 
         return self._list_assets("tool")
 
-    def _asset_folder(self, folder_name):
-        """Return the path to a top-level folder in the asset directory of the package."""
-
-        return self.filelib.path_join(self.assets_folder, folder_name)
-
     def _copy_helpers_to_dataset(self, dataset_path):
         """Copy all of the helper scripts to a dataset inside the subfolder ._wb"""
 
@@ -468,12 +464,12 @@ class Workbench(FolderHierarchyBase):
 
         # Iterate over all of the files in the "helpers" folder
         # of the installed bash_workbench package
-        for filename in self.filelib.listdir(self._asset_folder("helpers")):
+        for filename in self.filelib.listdir(self.helpers_folder):
 
             # Copy the repository asset from the package to the dataset
             self.filelib.copyfile(
                 self.filelib.path_join(
-                    self._asset_folder("helpers"),
+                    self.helpers_folder,
                     filename
                 ),
                 self.filelib.path_join(
@@ -770,7 +766,7 @@ class Workbench(FolderHierarchyBase):
             if fp.endswith(suffix)
         ]
 
-    def run_dataset(self, path=None):
+    def run_dataset(self, path:str=None, wait:bool=False) -> None:
         """Launch the tool which has been configured in a dataset."""
 
         # Copy all of the helpers to the dataset
@@ -780,7 +776,7 @@ class Workbench(FolderHierarchyBase):
         ds = self.datasets.from_path(path)
 
         # Run the dataset
-        ds.run()
+        ds.run(wait=wait)
 
     def repository(self, local_name:str=None) -> Repository:
         """Instantiate a Repository object."""
@@ -792,7 +788,7 @@ class Workbench(FolderHierarchyBase):
             verbose=self.verbose
         )
 
-    def list_repos(self):
+    def list_repos(self) -> List[str]:
         """Return a list of the GitHub repositories which are available locally."""
 
         return list(self.repositories.keys())

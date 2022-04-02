@@ -425,6 +425,10 @@ def make_parser():
                     type=str,
                     default=os.getcwd(),
                     help="Dataset folder to be run"
+                ),
+                "wait": dict(
+                    action="store_true",
+                    help="If specified, block until the dataset has finished running"
                 )
             }
         ),

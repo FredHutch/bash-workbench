@@ -1,7 +1,6 @@
 # Import the Workbench class to specify input type
 from .workbench import Workbench
-from .asset import Asset
-from .utils import convert_size
+from .misc import convert_size
 from .params_menu import ParamsMenu
 import questionary
 import json

@@ -319,10 +319,7 @@
   cd ext_data/data_folder_1
 
   # Run the dataset
-  wb run_dataset
-
-  # Wait for the process to end (since wb does not block to completion)
-  sleep 2
+  wb run_dataset --wait
 
   ls -lahtr
 

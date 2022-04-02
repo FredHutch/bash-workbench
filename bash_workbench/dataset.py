@@ -290,14 +290,58 @@ class Dataset(FolderHierarchyBase):
 
         return children_uuids
 
-    def run(self) -> None:
+    def run(self, wait:bool=False, interval:float=1.0) -> None:
         """Launch the tool which has been configured for this dataset."""
 
-        subprocess.Popen(
+        # Start the process
+        proc = subprocess.Popen(
             ["/bin/bash", self.wb_path("helpers/run_launcher")],
             start_new_session=True,
             cwd=self.base_path
         )
+
+        # If the user elected to wait for the process to complete
+        if wait:
+
+            # While the process is running
+            while proc.poll() is None:
+
+                # Wait for the specified interval (seconds)
+                try:
+                    outs, errs = proc.communicate(timeout=interval)
+                
+                # If the process did not finish in this period
+                except subprocess.TimeoutExpired:
+
+                    # Get the logging messages anyway
+                    outs, errs = proc.communicate()
+
+                # Print the output and error messages
+                self.print_lines(outs, prefix="OUTPUT")
+                self.print_lines(errs, prefix="ERROR")
+
+            # Once the process is done
+
+            # Get the logging messages
+            outs, errs = proc.communicate()
+
+            # Print the output and error messages
+            self.print_lines(outs, prefix="OUTPUT")
+            self.print_lines(errs, prefix="ERROR")
+
+            # Print the exit code
+            self.print_lines(f"Exit code: {proc.poll()}", prefix="DONE")
+
+    def print_lines(self, lines:str, prefix=None) -> None:
+        """Print a set of lines, along with a prefix and timestamp."""
+
+        # If any lines were provided
+        if lines is not None:
+
+            # Loop over each individual line
+            for line in lines.split("\n"):
+
+                print(self.timestamp.encode() + line)
 
     def has_logs(self) -> bool:
         """Boolean indicating whether any log files exist."""

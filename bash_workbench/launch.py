@@ -3,7 +3,10 @@
 
 import argcomplete
 from .args import make_parser
-from . import utils
+from .filelib import FileLib
+from .logging import setup_logger
+from .menu import WorkbenchMenu
+from .workbench import Workbench
 import json
 import yaml
 import os
@@ -20,7 +23,7 @@ def cli():
     args = parser.parse_args()
 
     # Get the library of functions used to interact with the filesystem
-    filelib = utils.filesystem.__dict__.get(args.filesystem)
+    filelib = FileLib(args.filesystem)
 
     # If the base_folder field was not provided
     if args.base_folder is None:
@@ -51,13 +54,13 @@ def cli():
     # Get a logger
     # If the user specified a function, output to the screen
     # Either way, append to a log file in the base folder
-    logger = utils.logging.setup_logger(
+    logger = setup_logger(
         log_stdout="func" in args.__dict__,
         log_fp=os.path.join(base_path, ".wb_log"),
     )
 
     # Set up a Workbench object
-    WB = utils.workbench.Workbench(
+    WB = Workbench(
         base_path=base_path,
         filelib=filelib,
         logger=logger,
@@ -68,7 +71,7 @@ def cli():
     if "func" not in args.__dict__:
 
         # Start the interactive menu
-        utils.menu.WorkbenchMenu(WB)
+        WorkbenchMenu(WB)
 
     # If a command was provided
     else:
