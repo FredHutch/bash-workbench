@@ -479,13 +479,6 @@ def make_parser():
             }
         ),
         dict(
-            key="list_linked_repos",
-            help="""
-            Print a list of the local repositories which have been linked
-            """,
-            kwargs={}
-        ),
-        dict(
             key="link_local_repo",
             help="""
             Link a local repository (containing a ._wb/ directory of tools and/or launchers)
