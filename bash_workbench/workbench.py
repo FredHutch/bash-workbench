@@ -479,25 +479,63 @@ class Workbench(FolderHierarchyBase):
             )
 
     def asset(self, asset_type:str=None, asset_name:str=None) -> Asset:
-        """Return an Asset from a particular repository, identified by name."""
+        """
+        Return an Asset from a particular repository, identified by name.
+        The clearest way to specify the asset is to provide the <repository>/<asset>.
+        However, if the asset name is unique, then the user should be able to
+        provide just <asset>.
+        """
 
-        # The asset_name should be <repository>/<asset>
-        msg = "Asset name must specify <repository>/<asset>"
-        assert "/" in asset_name, msg
-        assert len(asset_name.split("/")) == 2, msg
+        # If the repository name was not provided
+        if "/" not in asset_name:
 
-        repository, name = asset_name.split("/")
+            # Find all of the repos which contain an asset of this name
+            matching_repos = [
+                repo_name
+                for repo_name, repo in self.repositories.items()
+                if asset_name in repo.assets.get(asset_type, dict())
+            ]
 
-        # Get the Repository
-        repo = self.repositories.get(repository)
+            # If no matching assets were found
+            msg = f"No repositories found with the {asset_type} {asset_name}"
+            assert len(matching_repos) > 0, msg
 
-        assert repo is not None, f"Invalid repository: {repository}"
+            # If multiple matching assets were found
+            msg = f"Multiple repositories found with the {asset_type} {asset_name} ({', '.join(matching_repos)})"
+            assert len(matching_repos) == 1, msg
 
-        assert asset_type in repo.assets, f"Repository does not contain any assets of type {asset_type}"
+            # At this point, only a single repository was found
+            return self.repositories[
+                matching_repos[0]
+            ].assets[
+                asset_type
+            ][
+                asset_name
+            ]
 
-        assert name in repo.assets[asset_type], f"Repository {repository} does not contain any {asset_type} with the name {name}"
+        # Otherwise, the asset_name should be <repository>/<asset>
+        else:
 
-        return repo.assets[asset_type][name]
+            msg = "Asset name must specify <repository>/<asset>"
+            assert len(asset_name.split("/")) == 2, msg
+
+            # Parse the repository and asset name
+            repository, name = asset_name.split("/")
+
+            # Get the Repository
+            repo = self.repositories.get(repository)
+
+            # Make sure that the repository name is valid
+            assert repo is not None, f"Invalid repository: {repository}"
+
+            # Make sure that the repository has any assets of this type
+            assert asset_type in repo.assets, f"Repository does not contain any assets of type {asset_type}"
+
+            # Make sure that there is an asset of the appropriate type and name
+            assert name in repo.assets[asset_type], f"Repository {repository} does not contain any {asset_type} with the name {name}"
+
+            # Return the asset
+            return repo.assets[asset_type][name]
             
     def setup_dataset(self, path:str=None, tool:str=None, launcher:str=None, overwrite:bool=False):
         """Set up a dataset with a tool and a launcher."""
@@ -766,8 +804,15 @@ class Workbench(FolderHierarchyBase):
             if fp.endswith(suffix)
         ]
 
-    def run_dataset(self, path:str=None, wait:bool=False) -> None:
+    def run_dataset(self, path:str=None, wait:bool=False, **kwargs) -> None:
         """Launch the tool which has been configured in a dataset."""
+
+        # If any additional parameters were provided
+        if len(kwargs) > 0:
+
+            # Use those arguments to set the tool and launcher
+            for asset_type in ["tool", "launcher"]:
+                self._set_asset_params(path, asset_type, overwrite=True, **kwargs)
 
         # Copy all of the helpers to the dataset
         self._copy_helpers_to_dataset(path)

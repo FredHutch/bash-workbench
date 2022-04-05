@@ -1,41 +1,81 @@
 import argparse
 import os
 import json
+from .filelib import FileLib
 
 
 def read_asset_configs() -> dict:
     """Before setting up the parser, read any asset configurations from the current working directory."""
+
+    # Get a filesystem library helper
+    filelib = FileLib()
     
     asset_configs = dict()
 
+    # Keep a list of all of the asset types
+    asset_type_list = ["tool", "launcher"]
+
     # Check for configurations of both a tool and launcher    
-    for asset_type in ["tool", "launcher"]:
+    for asset_type in asset_type_list:
 
         # If the index folder eixsts
-        if os.path.exists("._wb") and os.path.isdir("._wb"):
-
+        if filelib.isdir("._wb"):
 
             # Get the folder used for the asset
-            asset_folder = os.path.join("._wb", asset_type)
+            asset_folder = filelib.path_join("._wb", asset_type)
 
-            # If the asset folder exists
-            if os.path.exists(asset_folder) and os.path.isdir(asset_folder):
+            # Get the file used for the configuration, if it exists
+            asset_config = filelib.read_json_in_folder(asset_folder, "config.json")
 
-                # Get the file used for the configuration
-                asset_json = os.path.join("._wb", asset_type, "config.json")
+            # If there is a configuration
+            if asset_config is not None:
 
-                # If the file exists
-                if os.path.exists(asset_json):
+                # If there are arguments defined
+                if asset_config.get("args") is not None:
 
-                    # Read the configuration
-                    with open(asset_json) as handle:
-                        asset_config = json.load(handle)
+                    # Save them
+                    asset_configs[asset_type] = asset_config.get("args")
 
-                        # If there are arguments defined
-                        if asset_config.get("args") is not None:
+        # If arguments were defined
+        if asset_configs.get(asset_type) is not None:
 
-                            # Save them
-                            asset_configs[asset_type] = asset_config.get("args")
+            # Read any previously-set parameters
+            params_json = filelib.read_json_in_folder(asset_folder, "params.json")
+
+            # If parameters were previously set
+            if params_json is not None:
+
+                # Iterate over each of those
+                for kw, val in params_json.items():
+
+                    # If there is an argument configured
+                    if asset_configs[asset_type].get(kw) is not None:
+
+                        # Set the default value
+                        asset_configs[asset_type][kw]["default"] = val
+
+                        # Make sure that it is no longer rquired
+                        asset_configs[asset_type][kw]["required"] = False
+
+    # Create a set of arguments which combines all asset types
+    # Note that any arguments with the same key will be mapped to the first
+    # asset type in the list.
+    combined_configs = dict()
+
+    # Iterate over the asset types
+    for asset_type in asset_type_list:
+
+        # For each of the arguments set by this asset
+        for kw, arg in asset_configs.get(asset_type, dict()).items():
+
+            # If the argument has not been set by a previous asset type
+            if combined_configs.get(kw) is None:
+
+                # Set the argument
+                combined_configs[kw] = arg
+
+    # Set a new value for the combined arguments
+    asset_configs["combined"] = combined_configs
 
     return asset_configs
 
@@ -429,7 +469,9 @@ def make_parser():
                 "wait": dict(
                     action="store_true",
                     help="If specified, block until the dataset has finished running"
-                )
+                ),
+                # Add the combined set of arguments for both the tool and launcher
+                **asset_configs.get("combined", {})
             }
         ),
         dict(

@@ -277,11 +277,33 @@
 
 }
 
-@test "list_repositories" {
+@test "quick run" {
+  # Instead of taking the time to set parameters in a separate command,
+  # set up and run a dataset in two commands
 
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
+  # Make a completely new folder
+  mkdir ext_data/data_folder_5
+  cd ext_data/data_folder_5
+
+  # Make some files in it
+  echo foo > bar
+  echo bar > foo
+
+  # Set it up with the tool 'make_tar_gz'
+  # Use the short name for the tool and launcher, since they are unique
+  wb setup_dataset \
+    --tool make_tar_gz \
+    --launcher base
+
+  # Set the params to use with the tool and run it in a single command
+  wb run_dataset \
+    --archive TEST_ARCHIVE \
+    --target ./ \
+    --wait
+
+}
+
+@test "list_repositories" {
 
   REPO_LIST="$(wb list_repos)"
   echo ${REPO_LIST}
