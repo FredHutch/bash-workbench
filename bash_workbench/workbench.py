@@ -621,11 +621,23 @@ class Workbench(FolderHierarchyBase):
             # If the parameter was not provided
             if kwargs.get(param_name) is None:
 
-                # Skip it
-                continue
+                # If there is a default value
+                if param_def.get("default") is not None:
 
-            # Get the value provided
-            param_value = kwargs[param_name]
+                    # Use that value
+                    param_value = param_def.get("default")
+
+                # Otherwise, if there is no default value
+                else:
+
+                    # Skip it
+                    continue
+
+            # If a value was provided by the user
+            else:
+
+                # Use the value that was provided
+                param_value = kwargs[param_name]
 
             # If a list was provided
             if isinstance(param_value, list):
