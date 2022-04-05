@@ -34,10 +34,12 @@ class Asset(FolderHierarchyBase):
         # Record the location of the repository which this asset is found in
         # To find this path, we will go up three levels in the file hierarchy,
         # since every asset is found in REPO/._wb/ASSET_TYPE/ASSET_NAME
-        self.repo_path = self.filelib.dirname(
+        self.repo_path = self.filelib.abs_path(
             self.filelib.dirname(
                 self.filelib.dirname(
-                    self.base_path
+                    self.filelib.dirname(
+                        self.base_path
+                    )
                 )
             )
         )
