@@ -103,7 +103,7 @@ class Workbench(FolderHierarchyBase):
 
         return ds.index
 
-    def add_to_home_tree(self, path):
+    def add_to_home_tree(self, path:str):
         """If a folder is not already contained in the home tree, add it."""
 
         # Resolve symlinks and remove any terminal slashes
@@ -202,7 +202,7 @@ class Workbench(FolderHierarchyBase):
                     # Add the subpath to the list of paths to check next
                     folders_to_check.append(subpath)
 
-    def dataset(self, path) -> Dataset:
+    def dataset(self, path:str) -> Dataset:
         """Generate a Dataset object for a particular path."""
 
         return Dataset(
@@ -212,7 +212,7 @@ class Workbench(FolderHierarchyBase):
             logger=self.logger
         )
 
-    def link_to_home(self, path):
+    def link_to_home(self, path:str):
         """Add a symlinnk of a path to the home directory."""
 
         # If there is a link to this folder already in the home directory
@@ -259,9 +259,9 @@ class Workbench(FolderHierarchyBase):
 
     def find_datasets(
         self,
-        name=None,
-        description=None,
-        tag=None
+        name:str=None,
+        description:str=None,
+        tag:str=None
     ):
         """Find any datasets which match the provided queries."""
 
@@ -282,7 +282,7 @@ class Workbench(FolderHierarchyBase):
         # Return the dict of datasets found
         return datasets
 
-    def filter_datasets(self, name=None, description=None, tag=None):
+    def filter_datasets(self, name:str=None, description:str=None, tag:str=None):
         """Apply one or more filters to the datasets in the workbench."""
 
         # If a query name was provided
@@ -326,9 +326,9 @@ class Workbench(FolderHierarchyBase):
 
     def tree(
         self,
-        name=None,
-        description=None,
-        tag=None,
+        name:str=None,
+        description:str=None,
+        tag:str=None,
     ):
         """
         Return the list of datasets formatted as a tree.
@@ -346,7 +346,7 @@ class Workbench(FolderHierarchyBase):
         # Format the list of dataset in tree format
         return self.datasets.format_dataset_tree()
 
-    def change_name(self, path=None, name=None):
+    def change_name(self, path:str=None, name:str=None):
         "Modify the name of a folder (dataset or collection)."
 
         # Change the name, collapsing a list with spaces if needed
@@ -356,7 +356,7 @@ class Workbench(FolderHierarchyBase):
             value=" ".join(name) if isinstance(name, list) else name
         )
 
-    def change_description(self, path=None, description=None):
+    def change_description(self, path:str=None, description:str=None):
         "Modify the description of a folder (dataset or collection)."
 
         # Change the description, collapsing a list with spaces if needed
@@ -366,7 +366,7 @@ class Workbench(FolderHierarchyBase):
             value=" ".join(description) if isinstance(description, list) else description
         )
 
-    def change_dataset_attribute(self, path=None, attribute=None, value=None):
+    def change_dataset_attribute(self, path:str=None, attribute:str=None, value:str=None):
         """Change any attribute of a dataset."""
 
         assert path is not None
@@ -384,9 +384,9 @@ class Workbench(FolderHierarchyBase):
 
     def update_tag(
         self, 
-        path=None,
-        key=None,
-        value=None
+        path:str=None,
+        key:str=None,
+        value:str=None
     ):
         "Modify the value of a tag applied to a folder."
 
@@ -405,8 +405,8 @@ class Workbench(FolderHierarchyBase):
 
     def delete_tag(
         self, 
-        path=None,
-        key=None,
+        path:str=None,
+        key:str=None,
     ):
         "Delete the value of a tag applied to a folder, if it exists."
 
@@ -422,7 +422,7 @@ class Workbench(FolderHierarchyBase):
         # Return the updated configuration
         return ds.index
 
-    def _list_assets(self, asset_type) -> list:
+    def _list_assets(self, asset_type:str) -> list:
 
         assert asset_type in ["tool", "launcher"]
 
@@ -449,7 +449,7 @@ class Workbench(FolderHierarchyBase):
 
         return self._list_assets("tool")
 
-    def _copy_helpers_to_dataset(self, dataset_path):
+    def _copy_helpers_to_dataset(self, dataset_path:str):
         """Copy all of the helper scripts to a dataset inside the subfolder ._wb"""
 
         # Instantiate a Dataset object
@@ -499,7 +499,7 @@ class Workbench(FolderHierarchyBase):
 
         return repo.assets[asset_type][name]
             
-    def setup_dataset(self, path=None, tool=None, launcher=None, overwrite=False):
+    def setup_dataset(self, path:str=None, tool:str=None, launcher:str=None, overwrite:bool=False):
         """Set up a dataset with a tool and a launcher."""
 
         self.log(f"Setting up a dataset for analysis at {path}")
@@ -528,17 +528,17 @@ class Workbench(FolderHierarchyBase):
         ds.set_attribute("tool", tool.name)
         ds.set_attribute("launcher", launcher.name)
 
-    def set_tool_params(self, path=None, overwrite=False, **kwargs):
+    def set_tool_params(self, path:str=None, overwrite:bool=False, **kwargs):
         """Set the parameters used to run the tool in a particular dataset."""
 
         self._set_asset_params(path, "tool", overwrite=overwrite, **kwargs)
 
-    def set_launcher_params(self, path=None, overwrite=False, **kwargs):
+    def set_launcher_params(self, path:str=None, overwrite:bool=False, **kwargs):
         """Set the parameters used to run the launcher in a particular dataset."""
 
         self._set_asset_params(path, "launcher", overwrite=overwrite, **kwargs)
 
-    def _set_asset_params(self, path, asset_type, overwrite=False, **kwargs):
+    def _set_asset_params(self, path:str, asset_type:str, overwrite:bool=False, **kwargs):
         """Set the parameters used to run a tool or launcher in a particular dataset."""
 
         # Instantiate the dataset object
@@ -612,17 +612,17 @@ class Workbench(FolderHierarchyBase):
         self.log(f"Writing out environment variables for {asset_type}")
         ds.write_asset_env(asset_type, env, overwrite=overwrite)
 
-    def save_tool_params(self, path=None, name=None, overwrite=False):
+    def save_tool_params(self, path:str=None, name:str=None, overwrite:bool=False):
         """Save the parameters used to run the tool in a particular dataset."""
 
         self._save_asset_params(path, "tool", name, overwrite=overwrite)
 
-    def save_launcher_params(self, path=None, name=None, overwrite=False):
+    def save_launcher_params(self, path:str=None, name:str=None, overwrite:bool=False):
         """Save the parameters used to run the launcher in a particular dataset."""
 
         self._save_asset_params(path, "launcher", name, overwrite=overwrite)
 
-    def _save_asset_params(self, path, asset_type, name, overwrite=False):
+    def _save_asset_params(self, path:str, asset_type:str, name:str, overwrite:bool=False):
         """Save the parameters used to run a tool or launcher in a particular dataset."""
 
         # Instantiate the dataset object
@@ -685,17 +685,17 @@ class Workbench(FolderHierarchyBase):
         self.log(f"Saving params to {params_fp}")
         self.filelib.write_json(params, params_fp, indent=4, sort_keys=True)
 
-    def read_tool_params(self, tool_name=None, params_name=None):
+    def read_tool_params(self, tool_name:str=None, params_name:str=None):
         """Read a set of parameters used to run the tool."""
 
         return self._read_asset_params(tool_name, "tool", params_name)
 
-    def read_launcher_params(self, launcher_name=None, params_name=None):
+    def read_launcher_params(self, launcher_name:str=None, params_name:str=None):
         """Read a set of parameters used to run the launcher."""
 
         return self._read_asset_params(launcher_name, "launcher", params_name)
 
-    def _read_asset_params(self, asset_name, asset_type, params_name):
+    def _read_asset_params(self, asset_name:str, asset_type:str, params_name:str):
         """Read a set of parameters used to run a tool or launcher."""
 
         # The user must specify the name of the asset
@@ -726,17 +726,17 @@ class Workbench(FolderHierarchyBase):
 
         return self.filelib.read_json(params_fp)
 
-    def list_tool_params(self, name=None):
+    def list_tool_params(self, name:str=None):
         """List the parameters available to run the tool."""
 
         return self._list_asset_params("tool", name)
 
-    def list_launcher_params(self, name=None):
+    def list_launcher_params(self, name:str=None):
         """List the parameters available to run the launcher."""
 
         return self._list_asset_params("launcher", name)
 
-    def _list_asset_params(self, asset_type, name):
+    def _list_asset_params(self, asset_type:str, name:str):
         """List the parameters available to run a tool or launcher."""
 
         # All params files are serialized in JSON format
@@ -819,7 +819,7 @@ class Workbench(FolderHierarchyBase):
         # Clone the remote repository
         repo.clone(repo_name=remote_name, method=method, server=server)
 
-    def link_local_repo(self, path=None, name=None):
+    def link_local_repo(self, path:str=None, name=None):
         """Link a local repository (containing a ._wb/ directory of tools and/or launchers)."""
 
         # The name cannot contain slashes or spaces
