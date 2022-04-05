@@ -6,10 +6,6 @@
 
 @test "setup_root_folder" {
 
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
-
   # Remove anything currently in the base_folder/
   rm -rf base_folder
 
@@ -25,10 +21,6 @@
 }
 
 @test "index_folder" {
-
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
 
   # Create a folder and subfolder outside of the base folder
   rm -rf ext_data
@@ -60,10 +52,6 @@
 
 @test "list_datasets" {
 
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
-
   # Create another subfolder outside of the base folder
   EXT_FOLDER=ext_data/data_folder_2
   mkdir ${EXT_FOLDER}
@@ -85,10 +73,6 @@
 }
 
 @test "find_datasets" {
-
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
 
   make_dataset(){
     FP=$1
@@ -127,10 +111,6 @@
 
 @test "update_tags" {
 
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
-
   # Add tags to datasets
   wb update_tag --path ext_data/data_folder_1 --key position --value base
   wb update_tag --path ext_data/data_folder_2 --key position --value base
@@ -157,10 +137,6 @@
 
 @test "add_repository" {
 
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
-
   wb add_repo --remote-name FredHutch/bash-workbench-tools
 
   [ -d base_folder/test/repositories/FredHutch_bash-workbench-tools ]
@@ -169,20 +145,12 @@
 
 @test "list_tools" {
 
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
-
   # List the basic set of tools available from the package
   [ $(wb list_tools | jq 'length') == 1 ]
 
 }
 
 @test "list_launchers" {
-
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
 
   # List the basic set of launchers available from the package
   LAUNCHERS=$(wb list_launchers)
@@ -193,10 +161,6 @@
 
 @test "setup_dataset" {
 
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
-
   # Set up the assets needed for analysis in a dataset folder
   wb setup_dataset \
     --path ext_data/data_folder_1 \
@@ -206,10 +170,6 @@
 }
 
 @test "set_tool_params" {
-
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
 
   # Make a separate folder with some dummy data files
   mkdir ext_data/unindexed_data_folder_A
@@ -242,10 +202,6 @@
 
 @test "set_launcher_params" {
 
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
-
   # Move into the dataset that we've set up with the `make_tar_gz` launcher
   cd ext_data/data_folder_1
 
@@ -261,10 +217,6 @@
 }
 
 @test "save_params" {
-
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
 
   # Move into the dataset that we've set up with the `make_tar_gz` tool
   cd ext_data/data_folder_1
@@ -292,10 +244,6 @@
 
 @test "read_params" {
 
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
-
   # Read the tool params that we saved previously
   TOOL_PARAMS="$(wb read_tool_params --tool_name make_tar_gz --params_name best_tool_params)"
 
@@ -312,10 +260,6 @@
 }
 
 @test "run_dataset" {
-
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
 
   # Move into the dataset that we've set up with the `make_tar_gz` launcher
   cd ext_data/data_folder_1
@@ -349,19 +293,11 @@
 
 @test "update_repository" {
 
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
-
   wb update_repo --name FredHutch_bash-workbench-tools
 
 }
 
 @test "delete_repository" {
-
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
 
   wb delete_repo --name FredHutch_bash-workbench-tools
 
@@ -370,10 +306,6 @@
 }
 
 @test "link_local_repository" {
-
-  # Set the location of the workbench index
-  export WB_BASE=$PWD/base_folder
-  export WB_PROFILE=test
 
   # Clone a repository to a folder outside of the home directory
   rm -rf local_repositories

@@ -20,4 +20,5 @@ jobs:
         run: pip3 install ./
 
       - name: test
-        run: bats tests/cli.bats
+        working-directory: tests
+        run: bash run_tests.sh
