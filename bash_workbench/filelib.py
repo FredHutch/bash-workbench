@@ -30,7 +30,7 @@ class FileLib:
 
     def isdir(self, path) -> bool:
         """The path is a directory."""
-        return os.path.isdir(path)
+        return os.path.exists(path) and os.path.isdir(path)
 
     def islink(self, path) -> bool:
         """The path is a link."""
@@ -95,6 +95,25 @@ class FileLib:
 
             with open(path, 'r') as handle:
                 return json.load(handle)
+
+    def read_json_in_folder(self, folder:str, file:str):
+        """Return the contents of a JSON file in a folder, if both exist."""
+
+        # If the folder exists
+        if self.isdir(folder):
+
+            # Make the full path
+            fp = self.path_join(folder, file)
+
+            # If the file exists
+            if self.exists(fp):
+
+                # Return the contents of the JSON
+                return self.read_json(fp)
+
+        # If neither exists, return None    
+        return None
+        
 
     def write_json(self, dat, path, **kwargs) -> None:
         """Write a file in JSON format."""
