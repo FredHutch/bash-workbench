@@ -211,6 +211,7 @@ class Dataset(FolderHierarchyBase):
         # Format a script which will be used to set environment variables in BASH
         env_script = "\n\n".join(["#!/bin/bash", "set -e", "####"])
         for env_name, env_val in env.items():
+            self.log(f"Environment: {env_name}='{env_val}'")
             env_script += "\n" + f"export {env_name}='{env_val}'"
 
         # Write the params object to the appropriate path for the asset type
