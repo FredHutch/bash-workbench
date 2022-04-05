@@ -42,7 +42,7 @@ class Asset(FolderHierarchyBase):
             )
         )
 
-    def validate_config(self):
+    def validate_config(self, disallowed_args=["base_folder", "profile", "filesystem", "print_format"]):
         """Validate that the tool or launcher is configured correctly"""
 
         # The asset must contain a handful of elements
@@ -55,6 +55,12 @@ class Asset(FolderHierarchyBase):
 
             assert key in self.config, f"Asset configuration must contain key '{key}'"
             assert isinstance(self.config[key], value_type), f"{key} must be of type {value_type}, not {type(self.config[key])}"
+
+            # There are a handful of argument keys which are not allowed, since they
+            # will conflict with flags used by the wb utility itself
+            for arg_key in self.config["args"]:
+
+                assert arg_key not in disallowed_args, f"Keyword argument cannot be used: {arg_key}"
 
     def copy_to_dataset(self, dataset:Dataset, overwrite=False):
         """Copy the files from an asset to a Dataset."""
