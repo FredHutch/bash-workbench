@@ -862,7 +862,7 @@ class WorkbenchMenu:
         # Move to that directory
         self.change_directory(
             self.wb.filelib.path_join(
-                self.wb.home_folder,
+                self.wb.base_path,
                 "data",
                 path
             )
