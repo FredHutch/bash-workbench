@@ -546,7 +546,7 @@ class WorkbenchMenu:
         ):
 
             # Get the absolute path
-            folder_path = self.wb.filelib.abs_path(folder_path)
+            folder_path = self.wb.filelib.path_join(self.cwd, folder_path)
 
             # Create the folder
             self.print_line(f"Creating folder {folder_path}")
