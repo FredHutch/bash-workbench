@@ -1,9 +1,7 @@
-from .menu import WorkbenchMenu
-
 class ParamsMenu:
     """Class used to coordinate the user-driven editing of parameters."""
 
-    def __init__(self, config:dict=None, params:dict=None, menu:WorkbenchMenu=None):
+    def __init__(self, config:dict=None, params:dict=None, menu=None):
         """Set up a set of parameters which must conform to a particular configuration."""
 
         # Make sure that all inputs were provided
