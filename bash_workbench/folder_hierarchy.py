@@ -1,3 +1,5 @@
+from .filelib import FileLib
+
 class FolderHierarchyBase:
     """
     Generic class to organize a data structure defined as a hierarchy of file objects.
@@ -15,7 +17,7 @@ class FolderHierarchyBase:
     def __init__(
         self,
         # Library used to interact with the filesystem
-        filelib=None,
+        filelib:FileLib=None,
         # Base path
         base_path:str=None,
         # Logging instance
