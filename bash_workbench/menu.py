@@ -161,11 +161,17 @@ class WorkbenchMenu:
             # Print:
             #   description, tags of cwd, etc.
             for key, val in ds.index.items():
-                if key != "name":
+                if key not in ["name", "status"]:
                     self.print_line(f"{key}: {val}", indent=1)
 
             # Print the directory
             self.print_line(f"path: {self.cwd}", indent=1)
+
+            # If there is a 'status' defined
+            if ds.index.get('status') is not None:
+
+                # Print the status
+                self.print_header(f"Dataset Status: {ds.index['status']}")
 
         else:
 
