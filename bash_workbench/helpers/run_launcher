@@ -43,5 +43,5 @@ set_status RUNNING
 
 # Run the launcher
 /bin/bash ._wb/launcher/run.sh \
-2>> ._wb/error.txt \
-1>> ._wb/output.txt
+2>> /dev/null \
+1>> /dev/null
