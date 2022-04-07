@@ -339,7 +339,9 @@ class ParamsMenu:
             password="password",
             file="path",
             folder="path",
-            select="select"
+            select="select",
+            integer="text",
+            float="text"
         )
 
         questionary_type = questionary_type_dict.get(wb_type)
@@ -356,6 +358,10 @@ class ParamsMenu:
             msg = "Must provide `wb_choices` for arguments where `wb_type` == 'select'"
             assert choices is not None, msg
             kwargs["choices"] = choices
+        elif wb_type == "integer":
+            kwargs["validate_type"] = lambda v: int(v)
+        elif wb_type == "float":
+            kwargs["validate_type"] = lambda v: float(v)
 
         msg = f"Error: no prompt type specified for variables of type {wb_type}"
         assert wb_type is not None, msg

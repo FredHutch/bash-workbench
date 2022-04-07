@@ -40,7 +40,15 @@ class WorkbenchMenu:
         self.wb.log(sys.version_info)
         self.wb.log(f"BASH Workbench: {bash_workbench.__version__}")
 
-    def questionary(self, fname, msg, **kwargs) -> str:
+    def type_validator(self, t, v):
+        """Return a boolean indicating whether `v` can be cast to `t(v)` without raising a ValueError."""
+        try:
+            t(v)
+            return True
+        except ValueError:
+            return False
+
+    def questionary(self, fname, msg, validate_type=None, **kwargs) -> str:
         """Wrap questionary functions to catch escapes and exit gracefully."""
 
         # Get the questionary function
@@ -51,6 +59,15 @@ class WorkbenchMenu:
 
         if fname == "select":
             kwargs["use_shortcuts"] = True
+
+        if validate_type is not None:
+            kwargs["validate"] = lambda v: self.type_validator(validate_type, v)
+
+        # The default value must be a string
+        if kwargs.get("default") is not None:
+            kwargs["default"] = str(kwargs["default"])
+
+        print(kwargs)
 
         # Add a spacer line before asking the question
         print("")
@@ -763,20 +780,11 @@ class WorkbenchMenu:
             # Get the name of the tool/launcher which has now been set up
             asset_name = ds.index.get(asset_type)
         
-        # Parse the repository name and asset name
-        repo_name, asset_name = asset_name.split("/", 1)
-
-        # Get the configuration for this asset
-        asset_config = self.wb.repositories[
-            repo_name
-        ].assets[
-            asset_type
-        ][
-            asset_name
-        ].config
+        # Set up this asset
+        asset = self.wb.asset(asset_type=asset_type, asset_name=asset_name)
 
         # If there are no arguments which need to be set up
-        if len(asset_config["args"]) == 0:
+        if len(asset.config["args"]) == 0:
 
             # Then we will write an empty JSON in params.json
             self.wb._set_asset_params(
@@ -824,7 +832,7 @@ class WorkbenchMenu:
 
         # Create an interactive menu to manipulate this set of parameters
         params_menu = ParamsMenu(
-            config=asset_config["args"],
+            config=asset.config["args"],
             params=params,
             menu=self
         )
