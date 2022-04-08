@@ -67,8 +67,6 @@ class WorkbenchMenu:
         if kwargs.get("default") is not None:
             kwargs["default"] = str(kwargs["default"])
 
-        print(kwargs)
-
         # Add a spacer line before asking the question
         print("")
 
