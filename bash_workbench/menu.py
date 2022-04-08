@@ -206,8 +206,8 @@ class WorkbenchMenu:
                 ("Run Tool", self.run_tool_menu)
             )
 
-            # If there is a non-FAILED status
-            if ds.index.get("status", "FAILED") != "FAILED":
+            # If there is a non-FAILED or COMPLETED status
+            if ds.index.get("status", "FAILED") not in ["FAILED", "COMPLETED"]:
 
                 # Add option for refreshing the status
                 options.append(
