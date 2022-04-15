@@ -695,6 +695,13 @@ class Workbench(FolderHierarchyBase):
         assert ds.index.get(asset_type) is not None, msg
         asset_name = ds.index.get(asset_type)
 
+        # If there is a '/' in the asset name
+        if "/" in asset_name:
+
+            # Then it must be a repository/tool
+            # Remove the repository, keep the tool
+            asset_name = asset_name.split("/")[-1]
+
         # The user must specify a name to associate with the saved params
         msg = "Must specify a name to associate with the saved params"
         assert name is not None, msg
@@ -709,6 +716,32 @@ class Workbench(FolderHierarchyBase):
         # Params must have been defined for this asset
         msg = f"No params have been set for {asset_type} in {path}"
         assert params is not None, msg
+
+        # Write the params JSON to a file
+        self._write_asset_params_json(
+            asset_type=asset_type,
+            asset_name=asset_name,
+            name=name,
+            params=params,
+            overwrite=overwrite
+        )
+
+    def _write_asset_params_json(
+        self,
+        asset_type:str=None,
+        asset_name:str=None,
+        name:str=None,
+        params:dict=None,
+        overwrite:bool=True
+    ):
+        """Serialize a set of saved parameters to JSON."""
+
+        # If there is a '/' in the asset name
+        if "/" in asset_name:
+
+            # Then it must be a repository/tool
+            # Remove the repository, keep the tool
+            asset_name = asset_name.split("/")[-1]
 
         # Construct the path to the folder which contains params for this asset
         params_folder = self.path(
@@ -760,6 +793,13 @@ class Workbench(FolderHierarchyBase):
         msg = f"Must specify the {asset_type} name"
         assert asset_name is not None, msg
 
+        # If there is a '/' in the asset name
+        if "/" in asset_name:
+
+            # Then it must be a repository/tool
+            # Remove the repository, keep the tool
+            asset_name = asset_name.split("/")[-1]
+
         # The user must specify the name of the params
         msg = f"Must specify the name used for this set of parameters"
         assert params_name is not None, msg
@@ -784,18 +824,73 @@ class Workbench(FolderHierarchyBase):
 
         return self.filelib.read_json(params_fp)
 
-    def list_tool_params(self, name:str=None):
+    def delete_tool_params(self, tool_name:str=None, params_name:str=None) -> None:
+        """Delete a set of saved parameters used to run the tool."""
+
+        return self._delete_asset_params(tool_name, "tool", params_name)
+
+    def delete_launcher_params(self, launcher_name:str=None, params_name:str=None) -> None:
+        """Delete a set of saved parameters used to run the launcher."""
+
+        return self._delete_asset_params(launcher_name, "launcher", params_name)
+
+    def _delete_asset_params(self, asset_name:str, asset_type:str, params_name:str) -> None:
+        """Delete a set of saved parameters used to run a tool or launcher."""
+
+        # The user must specify the name of the asset
+        msg = f"Must specify the {asset_type} name"
+        assert asset_name is not None, msg
+
+        # If there is a '/' in the asset name
+        if "/" in asset_name:
+
+            # Then it must be a repository/tool
+            # Remove the repository, keep the tool
+            asset_name = asset_name.split("/")[-1]
+
+        # The user must specify the name of the params
+        msg = f"Must specify the name used for this set of parameters"
+        assert params_name is not None, msg
+
+        # The params name must match an entry in the tool's param folder
+        msg = f"No parameters named '{params_name}' found for {asset_type} {asset_name}"
+        assert params_name in self._list_asset_params(
+            asset_type=asset_type,
+            name=asset_name
+        ), msg
+
+        # Set up the path to the saved params
+        params_fp = self.path(
+            "params",
+            asset_type,
+            asset_name,
+            f"{params_name}.json"
+        )
+
+        # Delete the file
+        self.log(f"Deleting saved parameter file {params_fp}")
+
+        self.filelib.rm(params_fp)
+
+    def list_tool_params(self, name:str=None) -> List[str]:
         """List the parameters available to run the tool."""
 
         return self._list_asset_params("tool", name)
 
-    def list_launcher_params(self, name:str=None):
+    def list_launcher_params(self, name:str=None) -> List[str]:
         """List the parameters available to run the launcher."""
 
         return self._list_asset_params("launcher", name)
 
-    def _list_asset_params(self, asset_type:str, name:str):
+    def _list_asset_params(self, asset_type:str, name:str) -> List[str]:
         """List the parameters available to run a tool or launcher."""
+
+        # If there is a '/' in the asset name
+        if "/" in name:
+
+            # Then it must be a repository/tool
+            # Remove the repository, keep the tool
+            name = name.split("/")[-1]
 
         # All params files are serialized in JSON format
         suffix = ".json"

@@ -1,4 +1,5 @@
 # Import the Workbench class to specify input type
+from wsgiref import validate
 from .workbench import Workbench
 from .misc import convert_size
 from .params_menu import ParamsMenu
@@ -329,10 +330,25 @@ class WorkbenchMenu:
         # Change the working directory
         self.print_line(f"Navigating to {path}")
         self.cwd = path
-        self.wb.filelib.chdir(path)
 
-        # Go back to the main menu
-        self.main_menu()
+        # Catch any errors while changing directory
+        try:
+            
+            # If the change was successful
+            self.wb.filelib.chdir(path)
+
+            # Go back to the main menu
+            self.main_menu()
+        
+        # If there was an error
+        except FileNotFoundError as e:
+
+            # Print the error
+            for line in str(e).split("\n"):
+                self.print_line(line)
+
+            # Give the user another chance
+            self.change_directory_menu()
 
     def list_files(self):
         """List the files in the current working directory."""
@@ -457,9 +473,8 @@ class WorkbenchMenu:
         repo_name=None
     ):
         """
-        If we can think of any other interesting things to do with
-        individual assets, that can go here. For now, let's just show
-        the user all of the files in the asset.
+        Give the user the option to view file assets,
+        or view / modify saved parameters.
         """
 
         # Make sure that the repo is valid
@@ -476,17 +491,38 @@ class WorkbenchMenu:
 
         # Make a list of the files in the asset folder
         choices = [
-            f"Show: {fn}"
+            f"Show file: {fn}"
             for fn in asset.listdir()
         ]
 
+        # Give the user the option to add a set of saved parameters
+        choices.append("Add params")
+        
+        # Get the list of previously saved paramters for this tool
+        saved_params_list = self.wb._list_asset_params(
+            asset_type=asset_type,
+            name=asset_name
+        )
+
+        # If there are any saved parameters available
+        if len(saved_params_list) > 0:
+            
+            # Give the user the option to view them
+            choices.extend([
+                f"View params: {saved_params_name}"
+                for saved_params_name in saved_params_list
+            ])
+
+            # Give the user the opportunity to delete any of them
+            choices.append("Delete params")
+        
         # Also give the user the option to go back to the previous menu
         choices.append("Back")
 
         # Select from the options
         selection = self.questionary(
             "select",
-            "Display the contents of a file",
+            "Display contents or modify saved params",
             choices=choices
         )
 
@@ -496,11 +532,43 @@ class WorkbenchMenu:
             # Go back
             self._browse_asset_menu(asset_type)
 
-        # Otherwise
+        # If the user opted to view a set of saved params
+        elif selection.startswith("View params: "):
+
+            # Read the params
+            saved_params = self.wb._read_asset_params(
+                asset_type=asset_type,
+                asset_name=asset_name,
+                params_name=selection[len("View params: "):]
+            )
+
+            # Print to the screen
+            print(json.dumps(saved_params, indent=4))
+            sleep(0.2)
+
+        # If the user has selected the option to remove a set of params
+        elif selection == "Delete params":
+
+            self.delete_asset_params_menu(
+                asset_type=asset_type,
+                asset_name=asset_name
+            )
+
+        # If the user has selected the option to add a new set of params
+        elif selection == "Add params":
+
+            self.add_asset_params_menu(
+                asset_type=asset_type,
+                asset_name=asset_name
+            )
+
+        # Otherwise, the user has selected to view a file
         else:
 
+            assert selection.startswith("Show file: ")
+
             # Get the file name from the selection
-            fn = selection.split(": ", 1)[1]
+            fn = selection[len("Show file: "):]
 
             # If it is a JSON file
             if fn.endswith(".json") or fn.endswith(".json.gz"):
@@ -520,12 +588,106 @@ class WorkbenchMenu:
                 # Print it
                 print(dat)
 
-            # Redisplay the menu
-            self._browse_single_asset(
+        # Redisplay the menu
+        self._browse_single_asset(
+            asset_type=asset_type,
+            asset_name=asset_name,
+            repo_name=repo_name
+        )
+
+    def add_asset_params_menu(
+        self,
+        asset_type=None,
+        asset_name=None
+    ):
+        """Save a set of asset parameters."""
+
+        # Get the list of previously saved paramters for this tool
+        saved_params_list = self.wb._list_asset_params(
+            asset_type=asset_type,
+            name=asset_name
+        )
+
+        # Get a new name to use for the params
+        name = self.questionary(
+            "text",
+            "Name for parameters",
+            validate=lambda v: v not in saved_params_list and " " not in v
+        )
+
+        # Set up this asset
+        asset = self.wb.asset(asset_type=asset_type, asset_name=asset_name)
+
+        # Modify the argument configuration slightly, setting
+        # each argument as optional (for the purpose of saving params)
+        config = {
+            kw: {
+                k: v if k != 'required' else False
+                for k, v in val.items()
+            }
+            for kw, val in asset.config["args"].items()
+        }
+
+        # Create an interactive menu to manipulate this set of parameters
+        params_menu = ParamsMenu(
+            config=config,
+            params=dict(),
+            menu=self,
+            confirm_text="Finished editing"
+        )
+
+        # Prompt the user to modify the parameters as needed
+        params_menu.prompt()
+
+        # If the user approved the parameters
+        if params_menu.approved:
+
+            # Save the parameters for the asset
+            self.wb._write_asset_params_json(
                 asset_type=asset_type,
                 asset_name=asset_name,
-                repo_name=repo_name
+                name=name,
+                params=params_menu.params,
+                overwrite=True,
             )
+
+    def delete_asset_params_menu(
+        self,
+        asset_type=None,
+        asset_name=None
+    ):
+        """Delete a set of saved asset parameters."""
+
+        # Get the list of previously saved paramters for this tool
+        saved_params_list = self.wb._list_asset_params(
+            asset_type=asset_type,
+            name=asset_name
+        )
+
+        # Pick one to delete
+        param_to_delete = self.questionary(
+            "select",
+            "Select parameters to delete",
+            choices=saved_params_list + ["Do not delete any"]
+        )
+
+        # If the user decided to delete one of the saved params
+        if param_to_delete != "Do not delete any":
+
+            # Confirm that the user wants to make the deletion
+            if self.questionary(
+                "confirm",
+                f"Confirm - remove saved parameter '{param_to_delete}'?"
+            ):
+
+                # Delete the saved parameters
+                self.wb._delete_asset_params(
+                    asset_name=asset_name,
+                    asset_type=asset_type,
+                    params_name=param_to_delete
+                )
+
+                self.print_line(f"Deleted saved parameter '{param_to_delete}'")
 
     def create_subfolder_menu(self):
         """Create a subfolder inside the current folder."""
@@ -769,7 +931,7 @@ class WorkbenchMenu:
         asset_name = ds.index.get(asset_type)
 
         # If an asset has not been set up
-        if asset_name is None:
+        while asset_name is None:
 
             # Choose one
             self.print_line(f"No {asset_name} has been set up yet")

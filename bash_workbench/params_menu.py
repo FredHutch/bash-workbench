@@ -1,18 +1,26 @@
 class ParamsMenu:
     """Class used to coordinate the user-driven editing of parameters."""
 
-    def __init__(self, config:dict=None, params:dict=None, menu=None):
+    def __init__(
+        self,
+        config:dict=None,
+        params:dict=None,
+        menu=None,
+        confirm_text:str="Review and run"
+    ):
         """Set up a set of parameters which must conform to a particular configuration."""
 
         # Make sure that all inputs were provided
         assert config is not None
         assert params is not None
         assert menu is not None
+        assert confirm_text is not None
 
         # Attach the inputs
         self.config = config
         self.params = params
         self.menu = menu
+        self.confirm_text = confirm_text
 
         # For each of the configured parameters
         for param_key in self.config:
@@ -178,12 +186,12 @@ class ParamsMenu:
                 f"{param_key}: {self.format_value(param_key)}"
                 for param_key in self.config
             ] + [
-                "Review and run",
+                self.confirm_text,
                 "Back to main menu", 
             ]
         )
 
-        if resp == "Review and run":
+        if resp == self.confirm_text:
             self.review_and_run()
         elif resp == "Back to main menu":
             self.back_to_main_menu()
