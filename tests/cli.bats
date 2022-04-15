@@ -155,7 +155,7 @@
   # List the basic set of launchers available from the package
   LAUNCHERS=$(wb list_launchers)
   echo "${LAUNCHERS}"
-  [ $(echo "${LAUNCHERS}" | jq 'length') == 2 ]
+  [ $(echo "${LAUNCHERS}" | jq 'length') == 3 ]
 
 }
 
