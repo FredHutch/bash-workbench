@@ -956,6 +956,9 @@ class WorkbenchMenu:
         except Exception as e:
             self.print_line(f"ERROR: {str(e)}")
 
+        # Update the list of Repositories which are available
+        self.wb.repositories = self.wb.setup_repositories()
+
         # Back to the repository menu
         self.manage_repositories_menu()
 
@@ -993,6 +996,9 @@ class WorkbenchMenu:
         except Exception as e:
             self.print_line(f"ERROR: {str(e)}")
 
+        # Update the list of Repositories which are available
+        self.wb.repositories = self.wb.setup_repositories()
+
         # Back to the repository menu
         self.manage_repositories_menu()
 
@@ -1028,6 +1034,9 @@ class WorkbenchMenu:
         except Exception as e:
             self.print_line(f"ERROR: {str(e)}")
 
+        # Update the list of Repositories which are available
+        self.wb.repositories = self.wb.setup_repositories()
+
         # Go back to the repository menu
         self.manage_repositories_menu()
 
@@ -1048,6 +1057,9 @@ class WorkbenchMenu:
             self.wb.delete_repo(name=repo_name)
         except Exception as e:
             self.print_line(f"ERROR: {str(e)}")
+
+        # Update the list of Repositories which are available
+        self.wb.repositories = self.wb.setup_repositories()
 
         # Go back to the repository menu
         self.manage_repositories_menu()
@@ -1072,6 +1084,9 @@ class WorkbenchMenu:
             self.wb.switch_branch(name=repo_name, branch=branch_name)
         except Exception as e:
             self.print_line(f"ERROR: {str(e)}")
+
+        # Update the list of Repositories which are available
+        self.wb.repositories = self.wb.setup_repositories()
 
         # Go back to the repository menu
         self.manage_repositories_menu()

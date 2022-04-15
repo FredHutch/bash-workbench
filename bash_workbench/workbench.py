@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 from .asset import Asset
 from .repository import Repository
 from .dataset import Dataset
@@ -27,26 +27,8 @@ class Workbench(FolderHierarchyBase):
         # Make sure that all of the appropriate directories exist
         self.setup_root_folder()
 
-        # Parse the folders which are contained within repositories/
-        # Each Repository contains an `assets` attriute which is a dict
-        # with keys 'tool' and 'launcher' with the list of the Assets contained
-        # in each repository, if any. 
-        self.repositories = {
-            folder_name: Repository(
-                base_path=self.path("repositories", folder_name),
-                logger=self.logger,
-                verbose=self.verbose,
-                filelib=self.filelib
-            )
-            for folder_name in self.listdir("repositories")
-        }
-        # If the repository does not contain
-        # a folder ._wb/, then Repository.complete == False.
-        self.repositories = {
-            repo_name: repo
-            for repo_name, repo in self.repositories.items()
-            if repo.complete
-        }
+        # Set up all of the repositories which are present
+        self.repositories = self.setup_repositories()
 
         # Parse all of the datasets contained within data/
         self.datasets = Datasets(self)
@@ -73,6 +55,32 @@ class Workbench(FolderHierarchyBase):
 
         # Make sure that all of the required top-level directories exist
         self.populate_folders()
+
+    def setup_repositories(self) -> Dict[str, Repository]:
+        """Read the dict of repositories which are available."""
+
+        # Parse the folders which are contained within repositories/
+        # Each Repository contains an `assets` attriute which is a dict
+        # with keys 'tool' and 'launcher' with the list of the Assets contained
+        # in each repository, if any. 
+        repositories = {
+            folder_name: Repository(
+                base_path=self.path("repositories", folder_name),
+                logger=self.logger,
+                verbose=self.verbose,
+                filelib=self.filelib
+            )
+            for folder_name in self.listdir("repositories")
+        }
+        # If the repository does not contain
+        # a folder ._wb/, then Repository.complete == False.
+        repositories = {
+            repo_name: repo
+            for repo_name, repo in repositories.items()
+            if repo.complete
+        }
+
+        return repositories
 
     def index_folder(self, path:str=None) -> dict:
 
