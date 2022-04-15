@@ -21,7 +21,13 @@ The goal of this utility is to make it easier to keep track of where your datase
 The BASH Workbench may be installed using Python3 with the following command:
 
 ```#!/bin/bash
-pip3 install git+https://github.com/FredHutch/bash-workbench.git
+pip3 install bash-workbench
+```
+
+or, on a shared system:
+
+```#!/bin/bash
+pip3 install --user bash-workbench
 ```
 
 Note: The BASH Workbench was developed using Python 3.9 but will likely work with earlier versions of Python3.
