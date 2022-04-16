@@ -1,5 +1,4 @@
 # Import the Workbench class to specify input type
-from wsgiref import validate
 from .workbench import Workbench
 from .misc import convert_size
 from .params_menu import ParamsMenu
@@ -224,9 +223,13 @@ class WorkbenchMenu:
                 )
 
             # Add option for editing the dataset
-            options.append(
-                ("Edit Dataset", self.modify_dataset_menu)
-            )
+            # and navigating the proximate filesystem
+            options.extend([
+                ("Edit Folder Name/Description", self.edit_name_description),
+                ("Change Directory", self.change_directory_menu),
+                ("Make Subfolder", self.create_subfolder_menu),
+                ("List Files", self.list_files)
+            ])
 
         # Add options used for all folders
         options.extend([
@@ -240,19 +243,6 @@ class WorkbenchMenu:
         # Select a submenu
         # The user selection will run a function
         self.select_func("Would you like to:", options)
-
-    def modify_dataset_menu(self):
-        """Menu options for modifying the current working directory."""
-        
-        self.select_func(
-            """Would you like to:""",
-            [
-                ("Create Subfolder", self.create_subfolder_menu),
-                ("Edit Name/Description", self.edit_name_description),
-                ("List Files", self.list_files),
-                ("Back to Main Menu", self.main_menu)
-            ]
-        )
 
     def list_all_datasets(self):
         """List the complete set of datasets which have been indexed by the workbench."""
@@ -277,7 +267,7 @@ class WorkbenchMenu:
                 ("List All Datasets", self.list_all_datasets),
                 ("Add/Remove Dataset Filters", self.add_remove_filters),
                 ("Import Existing Dataset", self.import_folder),
-                ("Change Directory", self.change_directory_menu),
+                ("Change Directory", self.jump_directory_menu),
                 ("Back to Main Menu", self.main_menu)
             ]
         )
@@ -324,8 +314,20 @@ class WorkbenchMenu:
         # Go back to the main menu
         self.main_menu()
 
-    def change_directory(self, path):
+    def jump_directory(self, path):
         """Change the working directory and return to the main menu."""
+
+        # The `path` will either be relative or absolute
+
+        # If the relative path is not valid
+        if not self.wb.filelib.exists(path):
+
+            # Then extrapolate to the absolute path
+            path = self.wb.filelib.path_join(
+                self.wb.base_path,
+                "data",
+                path
+            )
 
         # Change the working directory
         self.print_line(f"Navigating to {path}")
@@ -348,7 +350,7 @@ class WorkbenchMenu:
                 self.print_line(line)
 
             # Give the user another chance
-            self.change_directory_menu()
+            self.jump_directory_menu()
 
     def list_files(self):
         """List the files in the current working directory."""
@@ -371,7 +373,7 @@ class WorkbenchMenu:
 
                 # Report the number of items
                 folders.append(
-                    f"{fn}/ (contains {n:,} items)"
+                    (fn + "/", f"(contains {n:,} items)")
                 )
 
             # If the path is a file
@@ -382,7 +384,7 @@ class WorkbenchMenu:
 
                 # Report the filesize, formatted nicely
                 files.append(
-                    f"{fn} {convert_size(filesize)}"
+                    (fn, convert_size(filesize))
                 )
 
         if len(files) + len(folders) == 0:
@@ -391,10 +393,25 @@ class WorkbenchMenu:
         else:
 
             self.print_line(f"Files/folders in {self.cwd}:")
-            for folder_str in folders:
-                self.print_line(folder_str)
-            for file_str in files:
-                self.print_line(file_str)
+
+            # Get the longest file name
+            max_namelen = max([
+                len(fn)
+                for l in [folders, files]
+                for fn, _ in l
+            ])
+
+            # First print folders, then files
+            for l in [folders, files]:
+
+                # For each path and description
+                for fn, fn_str in l:
+
+                    # Calculate the length of the spacer
+                    spacer_len = 1 + max_namelen - len(fn)
+                    
+                    # Print the filepath, spacer, and description
+                    self.print_line(f"{fn}{' ' * spacer_len}{fn_str}")
 
         # Back to the main menu after the user hits enter
         self.select_func(
@@ -689,6 +706,43 @@ class WorkbenchMenu:
 
                 self.print_line(f"Deleted saved parameter '{param_to_delete}'")
 
+    def change_directory_menu(self):
+        """Navigate to one of the folders immediately above or below this one."""
+
+        # Get the list of subfolders within this one
+        folder_list = [
+            fp
+            for fp in self.wb.filelib.listdir(".")
+            if self.wb.filelib.isdir(fp)
+        ]
+
+        # Sort alphabetically
+        folder_list.sort()
+
+        # Make options for going up one level or staying put
+        parent_option = ".. (move up one level)"
+        no_change_option = ". (no change)"
+
+        # Give the user the choice of where to go
+        selection = self.questionary(
+            "select",
+            "Select a folder to navigate to",
+            choices=[
+                parent_option,
+                no_change_option,
+            ] + folder_list
+        )
+
+        if selection == parent_option:
+            self.wb.filelib.chdir("..")
+        elif selection == no_change_option:
+            pass
+        else:
+            self.wb.filelib.chdir(selection)
+
+        # Go back to the main menu
+        self.main_menu()
+
     def create_subfolder_menu(self):
         """Create a subfolder inside the current folder."""
 
@@ -707,6 +761,12 @@ class WorkbenchMenu:
                 "Short name (2-5 words):"
             )
 
+            # If the user provided an empty string
+            if len(folder_name) == 0:
+
+                # Stop the process
+                break
+
             # Construct the path
             folder_path = folder_name.replace(" ", "_")
 
@@ -716,47 +776,50 @@ class WorkbenchMenu:
                 # Tell the user
                 self.print_line(f"Folder already exists ({folder_path})")
 
-        # Get a description
-        folder_desc = self.questionary(
-            "text",
-            "Description (can be added/edited later):"
-        )
+        # If the user provided a folder name
+        if len(folder_name) > 0:
 
-        # Ask the user to confirm their entry
-        if self.questionary(
-            "confirm",
-            f"Confirm - create folder '{folder_name}'?"
-        ):
-
-            # Get the absolute path
-            folder_path = self.wb.filelib.path_join(self.cwd, folder_path)
-
-            # Create the folder
-            self.print_line(f"Creating folder {folder_path}")
-            self.wb.filelib.mkdir_p(folder_path)
-
-            # Index it
-            self.wb.index_folder(folder_path)
-
-            # Get the Dataset object
-            ds = self.wb.datasets.from_path(folder_path)
-
-            # Set the name and description
-            self.print_line(f"Adding name {folder_name}")
-            ds.set_attribute("name", folder_name)
-            self.print_line(f"Adding description {folder_desc}")
-            ds.set_attribute("description", folder_desc)
-
-            # Move to the folder
-            self.change_directory(
-                self.wb.filelib.path_join(
-                    self.cwd,
-                    folder_path
-                )
+            # Get a description
+            folder_desc = self.questionary(
+                "text",
+                "Description (can be added/edited later):"
             )
 
-        else:
-            self.print_line("Going back to main menu")
+            # Ask the user to confirm their entry
+            if self.questionary(
+                "confirm",
+                f"Confirm - create folder '{folder_name}'?"
+            ):
+
+                # Get the absolute path
+                folder_path = self.wb.filelib.path_join(self.cwd, folder_path)
+
+                # Create the folder
+                self.print_line(f"Creating folder {folder_path}")
+                self.wb.filelib.mkdir_p(folder_path)
+
+                # Index it
+                self.wb.index_folder(folder_path)
+
+                # Get the Dataset object
+                ds = self.wb.datasets.from_path(folder_path)
+
+                # Set the name and description
+                self.print_line(f"Adding name {folder_name}")
+                ds.set_attribute("name", folder_name)
+                self.print_line(f"Adding description {folder_desc}")
+                ds.set_attribute("description", folder_desc)
+
+                # Move to the folder
+                self.jump_directory(
+                    self.wb.filelib.path_join(
+                        self.cwd,
+                        folder_path
+                    )
+                )
+
+        self.print_line("Going back to main menu")
+        sleep(0.1)
 
         # Back to the main menu
         self.main_menu()
@@ -1017,7 +1080,7 @@ class WorkbenchMenu:
             # Return to the main menu
             self.main_menu()
 
-    def change_directory_menu(self, sep=" : "):
+    def jump_directory_menu(self, sep=" : "):
         """Select an indexed directory and navigate to it."""
 
         # Get a path which passes the current filter
@@ -1034,13 +1097,7 @@ class WorkbenchMenu:
         self.print_line(f"Moving to dataset {path}")
 
         # Move to that directory
-        self.change_directory(
-            self.wb.filelib.path_join(
-                self.wb.base_path,
-                "data",
-                path
-            )
-        )
+        self.jump_directory(path)
 
     def import_folder(self):
         """Import a folder from the filesystem."""
