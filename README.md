@@ -126,13 +126,13 @@ Every **dataset** folder contains a file `._wb/index.json` which contains any me
 The index JSON is structured as a set of key-value pairs, for example:
 ```
 {
-    "uuid": "cb16a629-4eda-4da0-9d10-65e3ad7388f9",
-    "created_at": "2022-02-14 23:00:14",
-    "tags": {},
-    "tool": "make_tar_gz",
-    "launcher": "base",
-    "name": "Example Dataset",
-    "description": "Longer description used to describe the contents of the example dataset."
+"uuid": "cb16a629-4eda-4da0-9d10-65e3ad7388f9",
+"created_at": "2022-02-14 23:00:14",
+"tags": {},
+"tool": "make_tar_gz",
+"launcher": "base",
+"name": "Example Dataset",
+"description": "Longer description used to describe the contents of the example dataset."
 }
 ```
 
@@ -161,12 +161,9 @@ Workbench containing different sets of **datasets**, **tools** and **launchers**
 
 The profile home folder contains:
 
- - `data/`: Contains symlinks to the **datasets** which may be located in different
- parts of a larger filesystem;
+ - `data/`: Contains symlinks to the **datasets** which may be located in different parts of a larger filesystem;
  - `params/`: Contains the saved settings used to run any **tools** or **launchers**.
- - `repositories/`: Contains any external code repositories which
- contain **tools** and **launchers** that have been imported
- by the user.
+ - `repositories/`: Contains any external code repositories which contain **tools** and **launchers** that have been imported by the user.
 
 ### Repositories
 
@@ -237,8 +234,5 @@ The major areas in which this project could helpfully be supported moving forwar
 include:
 
 - Configuring additional repositories with **tools** and **launchers** which are most useful to users;
-- Adding support for more convenient user interfaces, e.g. a textual user interface
-built on something like [npyscreen](https://npyscreen.readthedocs.io/) or [textual](https://github.com/Textualize/textual/);
-- Adding support for other filesystems, e.g. cloud computing platforms, both in
-terms of stand-along **launchers** as well as built-in adapters for managing
-**datasets** located in object storage.
+- Adding support for more convenient user interfaces, e.g. a textual user interface built on something like [npyscreen](https://npyscreen.readthedocs.io/) or [textual](https://github.com/Textualize/textual/);
+- Adding support for other filesystems, e.g. cloud computing platforms, both in terms of stand-along **launchers** as well as built-in adapters for managing **datasets** located in object storage.

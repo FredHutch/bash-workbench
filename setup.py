@@ -3,6 +3,11 @@
 import codecs
 from distutils.core import setup
 import os.path
+from pathlib import Path
+
+# read the contents of your README file
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
 
 def read(rel_path):
     here = os.path.abspath(os.path.dirname(__file__))
@@ -28,6 +33,8 @@ setup(
     name="bash_workbench",
     version=get_version("bash_workbench/__init__.py"),
     description="Dataset manager for more reproducible analysis with shell scripts",
+    long_description_content_type='text/markdown',
+    long_description=long_description,
     author="Samuel Minot",
     author_email="sminot@fredhutch.org",
     url="https://github.com/FredHutch/bash-workbench",
