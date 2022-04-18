@@ -1,2 +1,3 @@
-include requirements.txt README.md
-graft bash_workbench/helpers/*
+include requirements.txt
+include README.md
+include bash_workbench/helpers/*
