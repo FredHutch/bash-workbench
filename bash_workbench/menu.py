@@ -733,12 +733,15 @@ class WorkbenchMenu:
             ] + folder_list
         )
 
-        if selection == parent_option:
-            self.wb.filelib.chdir("..")
-        elif selection == no_change_option:
-            pass
-        else:
-            self.wb.filelib.chdir(selection)
+        if selection != no_change_option:
+            if selection == parent_option:
+                dest_path = self.wb.filelib.dirname(self.cwd)
+            else:
+                dest_path = self.wb.filelib.path_join(self.cwd, selection)
+
+            self.print_line(f"Navigating to {dest_path}")
+            self.cwd = dest_path
+            self.wb.filelib.chdir(dest_path)
 
         # Go back to the main menu
         self.main_menu()
