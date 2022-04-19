@@ -6,7 +6,7 @@ import questionary
 import json
 import sys
 import textwrap
-from time import sleep
+from time import sleep, strftime, gmtime
 import bash_workbench
 
 class WorkbenchMenu:
@@ -1226,6 +1226,14 @@ class WorkbenchMenu:
 
     def manage_repo(self, repo_name):
         """Manage a downloaded repository."""
+
+        # Print the version of the local repository
+        if self.wb.repositories[repo_name].repo is not None:
+            hexsha = self.wb.repositories[repo_name].repo.head.object.hexsha
+            self.print_line(f"Branch name: {self.wb.repositories[repo_name].repo.head.name}")
+            committed_date = strftime("%a, %d %b %Y %H:%M", gmtime(self.wb.repositories[repo_name].repo.head.object.committed_date))
+            self.print_line(f"Commit date: {committed_date}")
+            self.print_line(f"Commit hash: {hexsha}")
 
         # Ask the user what to do
         self.select_func(
