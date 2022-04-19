@@ -211,11 +211,11 @@ class ParamsMenu:
         # Set up a header to display with the list of options
         header = param_config.get("name", f"Parameter: {param_key}")
 
-        # If there is a description
-        if param_config.get("description") is not None:
+        # If there is help text
+        if param_config.get("help") is not None:
 
             # Add it to the header
-            header = header + "\n" + param_config.get("description")
+            header = header + "\n- " + param_config.get("help") + "\n"
 
         # If there is a value
         if param_value is not None:
