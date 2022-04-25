@@ -6,7 +6,7 @@
 
 set -e
 
-echo "Setting attribute $1 to $2" >> ._wb/log.txt
+echo "$(date) Setting attribute $1 to $2" >> ._wb/log.txt
 
 cat ._wb/index.json \
 | jq --arg key $1 --arg val $2 '. + {($key): $val}' \

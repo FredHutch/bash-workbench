@@ -9,14 +9,14 @@ LOG_FP=._wb/log.txt
 
 # Make sure that the expected file exists
 file_exists(){
-    echo "Checking for file $1" >> $LOG_FP && \
+    echo "$(date) Checking for file $1" >> $LOG_FP && \
     ( [ -e "${1}" ] || echo "File does not exist: $1" ) && \
     [ -e "${1}" ]
 }
 
 # Set the status of the dataset, while logging this action
 set_status(){
-    echo "Setting status of dataset to $1" >> $LOG_FP
+    echo "$(date) Setting status of dataset to $1" >> $LOG_FP
     /bin/bash ._wb/helpers/set_dataset_attribute status $1
 }
 
