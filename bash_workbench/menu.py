@@ -1138,6 +1138,10 @@ class WorkbenchMenu:
                 # If the dataset is still running
                 else:
 
+                    # Get the list of custom actions which may
+                    # optionally be available
+                    actions = ds.get_actions()
+
                     # Ask the user what they want to do
                     user_choice = self.questionary(
                         "select",
@@ -1145,8 +1149,14 @@ class WorkbenchMenu:
                         choices=[
                             print_logs_prompt,
                             exit_logs_prompt
-                        ]
+                        ] + actions
                     )
+
+                    # If the user selected an action
+                    if user_choice in actions:
+
+                        # Run the action
+                        ds.run_action(user_choice)
 
     def jump_directory_menu(self, sep=" : "):
         """Select an indexed directory and navigate to it."""
