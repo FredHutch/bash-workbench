@@ -1,6 +1,7 @@
 from typing import List
 from .folder_hierarchy import FolderHierarchyBase
 from .timestamp import Timestamp
+from .filelib import FileWatcher
 import subprocess
 import uuid
 
@@ -355,9 +356,9 @@ class Dataset(FolderHierarchyBase):
         return [
             fn
             for fn in [
+                "log",
                 "output",
-                "error",
-                "log"
+                "error"
             ]
             if self.wb_path_exists(f"{fn}.txt")
         ]
@@ -369,3 +370,37 @@ class Dataset(FolderHierarchyBase):
         assert self.wb_path_exists(f"{log_type}.txt"), msg
 
         return self.read_text("._wb", f"{log_type}.txt")
+
+    def file_watcher(self, path:str) -> FileWatcher:
+        """Return a FileWatcher for a file in ._wb/"""
+
+        return FileWatcher(f"._wb/{path}")
+
+    def get_actions(self) -> List[str]:
+        """Return the list of actions available."""
+
+        # If the bin/ folder is not present
+        if not self.wb_path_exists("bin"):
+
+            # There are no actions
+            return []
+
+        else:
+
+            # Return all non-hidden files
+            return [
+                fn
+                for fn in self.listdir("._wb", "bin")
+                if len(fn) > 0 and fn[0] != "."
+            ]
+
+    def run_action(self, action_name) -> None:
+        """Run a specific action."""
+
+        # Start the process
+        subprocess.Popen(
+            ["/bin/bash", self.wb_path(f"bin/{action_name}")],
+            start_new_session=True,
+            cwd=self.base_path
+        )
+

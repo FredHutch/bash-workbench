@@ -434,28 +434,52 @@ class WorkbenchMenu:
     def _prompt_user_to_select_asset(self, asset_type):
         """Show the user the set of assets which are available."""
 
-        # The selection scheme used below only works if repo_name does not contain a '/'
-        # and asset_name does not contain a ": "
-
-        # Format a list of strings using the repository, asset key, name, and description
-        choices = [
-            f"{repo_name}/{asset_name}: {asset.config['name']}\n      {asset.config['description']}\n"
+        # Make a list of repositories to choose from
+        repository_choices = [
+            f"{repo_name}\n      {asset_type.title()}s available: {len(repo.assets.get(asset_type, []))}"
             for repo_name, repo in self.wb.repositories.items()
-            for asset_name, asset in repo.assets.get(asset_type, []).items()
+            if len(repo.assets.get(asset_type, [])) > 0
+        ]
+
+        # Give the option to go back
+        repository_choices.append("Back")
+
+        # Ask the user to select a repository
+        selected_repo = self.questionary(
+            "select",
+            f"Select a repository",
+            choices=repository_choices
+        )
+        
+        # Remove the description
+        selected_repo = selected_repo.split("\n")[0]
+
+        # If the user decided to go back
+        if selected_repo == "Back":
+
+            return (selected_repo, None)
+
+        # Format a list of strings using the asset key, name, and description
+        asset_choices = [
+            f"{asset_name}\n      {asset.config['name']}\n      {asset.config['description']}\n"
+            for asset_name, asset in self.wb.repositories[selected_repo].assets.get(asset_type, []).items()
         ]
 
         # Sort the list alphabetically
-        choices.sort()
+        asset_choices.sort()
 
         # Add the option to go back
-        choices.append("Back")
+        asset_choices.append("Back")
 
         # Get the selction
-        return self.questionary(
+        selected_asset = self.questionary(
             "select",
             f"Select a {asset_type}",
-            choices=choices
+            choices=asset_choices
         )
+
+        # Return a tuple with the repository and the asset
+        return (selected_repo, selected_asset.split("\n")[0])
 
     def _browse_asset_menu(self, asset_type):
         """Show the user the set of assets which are available."""
@@ -867,9 +891,8 @@ class WorkbenchMenu:
                 self.print_line(".")
                 sleep(0.1)
 
-            # Update the status of the dataset
-            self.wb.dataset(self.cwd).read_index()
-            self.print_line("Refresh to view the status")
+            # Tail the logs
+            self.tail_logs()
 
         # Return to the main menu
         self.main_menu()
@@ -940,19 +963,16 @@ class WorkbenchMenu:
 
         # Present the user with a list of assets and get their response
         # If they want to select none, they can use the "Back" option provided
-        selection = self._prompt_user_to_select_asset(asset_type)
+        repo_name, asset_name = self._prompt_user_to_select_asset(asset_type)
 
         # If the user decided to go back
-        if selection == "Back":
+        if repo_name == "Back" or asset_name == "Back":
 
             # Go back
             self.main_menu()
 
         # Otherwise
         else:
-
-            # Parse the repository and asset from the selection
-            repo_name, asset_name = selection.split(": ")[0].split("/", 1)
 
             # If the asset has already been set up
             if ds.__dict__.get(asset_type) is not None:
@@ -1083,6 +1103,61 @@ class WorkbenchMenu:
             # Return to the main menu
             self.main_menu()
 
+    def tail_logs(self):
+        """Show the user the log file as it is updated"""
+
+        # Get the dataset information
+        ds = self.wb.dataset(self.cwd)
+
+        # Set up the text used to prompt the user
+        print_logs_prompt = "View more logs"
+        exit_logs_prompt = "Return to main menu (leaving process running)"
+
+        # Print logs to start
+        user_choice = print_logs_prompt
+
+        # Establish a connection to the log file
+        with ds.file_watcher("log.txt") as log_file:
+
+            # Until the user decides to return to the main menu
+            while user_choice != exit_logs_prompt:
+
+                # Print all of the lines currently written to the log
+                log_file.print_all()
+
+                # Refresh the status from the index
+                ds.read_index()
+
+                # If there is a 'status' defined as FAILED or COMPLETED
+                if ds.index.get('status') in ["FAILED", "COMPLETED"]:
+
+                    # Then we will exit the logs
+                    user_choice = exit_logs_prompt
+                    sleep(0.5)
+
+                # If the dataset is still running
+                else:
+
+                    # Get the list of custom actions which may
+                    # optionally be available
+                    actions = ds.get_actions()
+
+                    # Ask the user what they want to do
+                    user_choice = self.questionary(
+                        "select",
+                        "Options",
+                        choices=[
+                            print_logs_prompt,
+                            exit_logs_prompt
+                        ] + actions
+                    )
+
+                    # If the user selected an action
+                    if user_choice in actions:
+
+                        # Run the action
+                        ds.run_action(user_choice)
+
     def jump_directory_menu(self, sep=" : "):
         """Select an indexed directory and navigate to it."""
 
@@ -1166,8 +1241,17 @@ class WorkbenchMenu:
         # Get the name of the repository to download
         repo_name = self.questionary("text", "Repository name")
 
+        # Make sure that the user has checked the spelling and trusts
+        # the content of this repository
+        prompt = textwrap.dedent(f"""
+        Do you trust the code in this repository?
+        
+        Make sure that the spelling of the repository is correct: {repo_name}
+
+        Press <ENTER> or Y to confirm download.""")
+
         # If the user is not sure
-        if not self.questionary("confirm", f"Confirm - download repository {repo_name}"):
+        if not self.questionary("confirm", prompt):
 
             # Go back to the repository menu
             self.manage_repositories_menu()
@@ -1200,26 +1284,34 @@ class WorkbenchMenu:
             # Replace it with the complete home folder
             repo_fp = repo_fp.replace("~", self.wb.filelib.home())
 
-        # If the user is not sure
-        if not self.questionary(
+        # Make sure that the path is valid
+        is_valid = True
+
+        if len(repo_fp) == 0:
+            self.print_line("No entry made")
+            is_valid = False
+
+        elif not self.wb.filelib.exists(repo_fp):
+            self.print_line("Path is not valid")
+            is_valid = False
+
+        # If the path is valid, and the user is sure
+        if is_valid and self.questionary(
             "confirm",
-            f"Confirm - link local repository {repo_fp}"
+            f"Confirm - link local repository: {repo_fp}"
         ):
 
-            # Go back to the repository menu
-            self.manage_repositories_menu()
+            # Try to link it
+            try:
+                self.wb.link_local_repo(
+                    path=repo_fp,
+                    name=repo_fp.rstrip("/").rsplit("/", 1)[-1]
+                )
+            except Exception as e:
+                self.print_line(f"ERROR: {str(e)}")
 
-        # Try to link it
-        try:
-            self.wb.link_local_repo(
-                path=repo_fp,
-                name=repo_fp.rstrip("/").rsplit("/", 1)[-1]
-            )
-        except Exception as e:
-            self.print_line(f"ERROR: {str(e)}")
-
-        # Update the list of Repositories which are available
-        self.wb.repositories = self.wb.setup_repositories()
+            # Update the list of Repositories which are available
+            self.wb.repositories = self.wb.setup_repositories()
 
         # Back to the repository menu
         self.manage_repositories_menu()

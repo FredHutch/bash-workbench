@@ -374,6 +374,13 @@ class ParamsMenu:
         msg = f"Error: no prompt type specified for variables of type {wb_type}"
         assert wb_type is not None, msg
 
+        # This variable can be used to add a header above the prompt
+        header = ""
+
+        if wb_type in ["file", "folder"]:
+            # Give the user some tips for selecting files and folders
+            header = "Use ../ to select the parent folder, or / to enter an absolute path\n  Press <TAB> at any time for autocomplete\n  "
+
         # Delete empty values in the kwargs
         kwargs = {
             k: v
@@ -381,4 +388,4 @@ class ParamsMenu:
             if v is not None
         }
 
-        return self.menu.questionary(questionary_type, f"{wb_type}:", **kwargs)
+        return self.menu.questionary(questionary_type, f"{header}{wb_type}:", **kwargs)

@@ -138,4 +138,15 @@ class Repository(FolderHierarchyBase):
         """Delete a local copy of a repository."""
 
         self.log(f"Deleting local copy of repository: {self.base_path}")
-        self.filelib.rmdir(self.base_path)
+
+        # If the base path is a symlink
+        if self.filelib.islink(self.base_path):
+
+            # Remove the link
+            self.filelib.rm(self.base_path)
+
+        # If the base path is not a list
+        else:
+
+            # Remove the entire directory
+            self.filelib.rmdir(self.base_path)
