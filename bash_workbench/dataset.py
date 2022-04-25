@@ -355,9 +355,9 @@ class Dataset(FolderHierarchyBase):
         return [
             fn
             for fn in [
+                "log",
                 "output",
-                "error",
-                "log"
+                "error"
             ]
             if self.wb_path_exists(f"{fn}.txt")
         ]
