@@ -5,6 +5,69 @@ import shutil
 import textwrap
 
 
+class FileWatcher:
+    """Object used to read the contents of a file as it changes."""
+
+    def __init__(self, path:str):
+        """Set up a FileWatcher to watch a file at a particular path."""
+
+        # Save the path
+        self.path = path
+
+        # Set up a null value where the handle will be added
+        self.handle = None
+
+    def __enter__(self):
+        """Support the use of with statements."""
+        
+        # Open the handle to the file object (creates self.handle)
+        self.open()
+        
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Method called at the end of a with statement."""
+
+        # Close the file handle, if it has been opened
+        self.close()
+
+    def open(self):
+        """Open the file object, if it exists."""
+
+        # If the file exists
+        if os.path.exists(self.path):
+
+            # Open the file
+            self.handle = open(self.path, "r")
+
+    def close(self):
+        """Close the file object."""
+
+        # If the file has been opened
+        if self.handle is not None:
+
+            # Close it
+            self.handle.close()
+
+    def print_all(self):
+        """Print all of the lines which have not yet been written."""
+
+        # If the file has not yet been opened
+        if self.handle is None:
+
+            # Try to open it
+            self.open()
+
+        # If the file has been opened
+        if self.handle is not None:
+
+            # Iterate over every line
+            for line in self.handle:
+
+                # Print the line
+                print(line.rstrip("\n"))
+
+
 class FileLib:
     """Helper class used to interact with a file (or object storage) system."""
 
@@ -182,3 +245,8 @@ class FileLib:
             cd {path}
             """
         )
+
+    def file_watcher(self, path:str) -> FileWatcher:
+        """Return a FileWatcher object."""
+
+        return FileWatcher(path)

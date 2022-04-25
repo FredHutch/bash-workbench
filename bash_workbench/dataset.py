@@ -1,6 +1,7 @@
 from typing import List
 from .folder_hierarchy import FolderHierarchyBase
 from .timestamp import Timestamp
+from .filelib import FileWatcher
 import subprocess
 import uuid
 
@@ -369,3 +370,8 @@ class Dataset(FolderHierarchyBase):
         assert self.wb_path_exists(f"{log_type}.txt"), msg
 
         return self.read_text("._wb", f"{log_type}.txt")
+
+    def file_watcher(self, path:str) -> FileWatcher:
+        """Return a FileWatcher for a file in ._wb/"""
+
+        return FileWatcher(f"._wb/{path}")

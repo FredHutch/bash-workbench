@@ -891,9 +891,8 @@ class WorkbenchMenu:
                 self.print_line(".")
                 sleep(0.1)
 
-            # Update the status of the dataset
-            self.wb.dataset(self.cwd).read_index()
-            self.print_line("Refresh to view the status")
+            # Tail the logs
+            self.tail_logs()
 
         # Return to the main menu
         self.main_menu()
@@ -1103,6 +1102,51 @@ class WorkbenchMenu:
 
             # Return to the main menu
             self.main_menu()
+
+    def tail_logs(self):
+        """Show the user the log file as it is updated"""
+
+        # Get the dataset information
+        ds = self.wb.dataset(self.cwd)
+
+        # Set up the text used to prompt the user
+        print_logs_prompt = "View more logs"
+        exit_logs_prompt = "Return to main menu (leaving process running)"
+
+        # Print logs to start
+        user_choice = print_logs_prompt
+
+        # Establish a connection to the log file
+        with ds.file_watcher("log.txt") as log_file:
+
+            # Until the user decides to return to the main menu
+            while user_choice != exit_logs_prompt:
+
+                # Print all of the lines currently written to the log
+                log_file.print_all()
+
+                # Refresh the status from the index
+                ds.read_index()
+
+                # If there is a 'status' defined as FAILED or COMPLETED
+                if ds.index.get('status') in ["FAILED", "COMPLETED"]:
+
+                    # Then we will exit the logs
+                    user_choice = exit_logs_prompt
+                    sleep(0.5)
+
+                # If the dataset is still running
+                else:
+
+                    # Ask the user what they want to do
+                    user_choice = self.questionary(
+                        "select",
+                        "Options",
+                        choices=[
+                            print_logs_prompt,
+                            exit_logs_prompt
+                        ]
+                    )
 
     def jump_directory_menu(self, sep=" : "):
         """Select an indexed directory and navigate to it."""
