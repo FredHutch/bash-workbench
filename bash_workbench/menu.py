@@ -434,28 +434,52 @@ class WorkbenchMenu:
     def _prompt_user_to_select_asset(self, asset_type):
         """Show the user the set of assets which are available."""
 
-        # The selection scheme used below only works if repo_name does not contain a '/'
-        # and asset_name does not contain a ": "
-
-        # Format a list of strings using the repository, asset key, name, and description
-        choices = [
-            f"{repo_name}/{asset_name}: {asset.config['name']}\n      {asset.config['description']}\n"
+        # Make a list of repositories to choose from
+        repository_choices = [
+            f"{repo_name}\n      {asset_type.title()}s available: {len(repo.assets.get(asset_type, []))}"
             for repo_name, repo in self.wb.repositories.items()
-            for asset_name, asset in repo.assets.get(asset_type, []).items()
+            if len(repo.assets.get(asset_type, [])) > 0
+        ]
+
+        # Give the option to go back
+        repository_choices.append("Back")
+
+        # Ask the user to select a repository
+        selected_repo = self.questionary(
+            "select",
+            f"Select a repository",
+            choices=repository_choices
+        )
+        
+        # Remove the description
+        selected_repo = selected_repo.split("\n")[0]
+
+        # If the user decided to go back
+        if selected_repo == "Back":
+
+            return (selected_repo, None)
+
+        # Format a list of strings using the asset key, name, and description
+        asset_choices = [
+            f"{asset_name}\n      {asset.config['name']}\n      {asset.config['description']}\n"
+            for asset_name, asset in self.wb.repositories[selected_repo].assets.get(asset_type, []).items()
         ]
 
         # Sort the list alphabetically
-        choices.sort()
+        asset_choices.sort()
 
         # Add the option to go back
-        choices.append("Back")
+        asset_choices.append("Back")
 
         # Get the selction
-        return self.questionary(
+        selected_asset = self.questionary(
             "select",
             f"Select a {asset_type}",
-            choices=choices
+            choices=asset_choices
         )
+
+        # Return a tuple with the repository and the asset
+        return (selected_repo, selected_asset.split("\n")[0])
 
     def _browse_asset_menu(self, asset_type):
         """Show the user the set of assets which are available."""
@@ -940,19 +964,16 @@ class WorkbenchMenu:
 
         # Present the user with a list of assets and get their response
         # If they want to select none, they can use the "Back" option provided
-        selection = self._prompt_user_to_select_asset(asset_type)
+        repo_name, asset_name = self._prompt_user_to_select_asset(asset_type)
 
         # If the user decided to go back
-        if selection == "Back":
+        if repo_name == "Back" or asset_name == "Back":
 
             # Go back
             self.main_menu()
 
         # Otherwise
         else:
-
-            # Parse the repository and asset from the selection
-            repo_name, asset_name = selection.split(": ")[0].split("/", 1)
 
             # If the asset has already been set up
             if ds.__dict__.get(asset_type) is not None:
