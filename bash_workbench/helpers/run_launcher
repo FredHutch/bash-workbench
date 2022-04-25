@@ -41,7 +41,10 @@ source ._wb/launcher/env
 # Set the status as RUNNING
 set_status RUNNING
 
-# Run the launcher
+# Run the launcher with the `run.sh` script defined by
+# the developer. While running this command, route any
+# messages to standard out or standard error to canonical
+# filepaths
 /bin/bash ._wb/launcher/run.sh \
-2>> /dev/null \
-1>> /dev/null
+2>> >(tee -a ._wb/error.txt ._wb/log.txt >(cat 1>&2)) \
+1>> >(tee -a ._wb/output.txt ._wb/log.txt)
