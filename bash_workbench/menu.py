@@ -1221,6 +1221,17 @@ class WorkbenchMenu:
             ("Back to Main Menu", self.main_menu)
         ]
 
+        # Make a dict of functions
+        func_map = dict()
+
+        # Make a list of choices to present
+        choices = list()
+
+        # Populate the dictionary and the list
+        for name, f in options:
+            func_map[name] = f
+            choices.append(name)
+
         # Add options to modify each of the downloaded and linked repositories
 
         # Get the list of repositories which have been downloaded
@@ -1228,18 +1239,32 @@ class WorkbenchMenu:
 
         # Add an option for each of the downloaded repositories
         for repo in local_repos:
-            options.append(
-                (
-                    f"Manage repository {repo}",
-                    lambda: self.manage_repo(repo)
-                )
-            )
+            choices.append(f"Manage repository: {repo}")
 
-        # Ask the user what to do
-        self.select_func(
+        # Ask the user
+        choice = self.questionary(
+            "select",
             "Manage Repositories",
-            options
+            choices=choices
         )
+
+        # If the user decided to manage a repository
+        if choice.startswith("Manage repository: "):
+
+            # Get the repository name
+            repo = choice[len("Manage repository: "):]
+
+            # Launch the menu for managing that repository
+            self.manage_repo(repo)
+
+        # If the user selected something else
+        else:
+
+            # Make sure that we know what function to run
+            assert choice in func_map, f"Cannot map selection ({choices}) to options ({', '.join(list(func_map.keys()))})"
+
+            # Open that menu
+            func_map[choice]()
 
     def download_repo(self):
         """Download a GitHub repository."""
@@ -1247,29 +1272,38 @@ class WorkbenchMenu:
         # Get the name of the repository to download
         repo_name = self.questionary("text", "Repository name")
 
-        # Make sure that the user has checked the spelling and trusts
-        # the content of this repository
-        prompt = textwrap.dedent(f"""
-        Do you trust the code in this repository?
-        
-        Make sure that the spelling of the repository is correct: {repo_name}
+        # If the user entered an empty string, or one without a '/' in the middle
+        if len(repo_name) < 3 or "/" not in repo_name or len(repo_name.split("/")) != 2:
 
-        Press <ENTER> or Y to confirm download.""")
+            # Tell the user that the repository is not valid
+            self.print_line(f"Repository name not valid: '{repo_name}'")
 
-        # If the user is not sure
-        if not self.questionary("confirm", prompt):
+        # If the repository name is plausible
+        else:
 
-            # Go back to the repository menu
-            self.manage_repositories_menu()
+            # Make sure that the user has checked the spelling and trusts
+            # the content of this repository
+            prompt = textwrap.dedent(f"""
+            Do you trust the code in this repository?
+            
+            Make sure that the spelling of the repository is correct: {repo_name}
 
-        # Try to download it
-        try:
-            self.wb.add_repo(repo_name)
-        except Exception as e:
-            self.print_line(f"ERROR: {str(e)}")
+            Press <ENTER> or Y to confirm download.""")
 
-        # Update the list of Repositories which are available
-        self.wb.repositories = self.wb.setup_repositories()
+            # If the user is not sure
+            if not self.questionary("confirm", prompt):
+
+                # Go back to the repository menu
+                self.manage_repositories_menu()
+
+            # Try to download it
+            try:
+                self.wb.add_repo(repo_name)
+            except Exception as e:
+                self.print_line(f"ERROR: {str(e)}")
+
+            # Update the list of Repositories which are available
+            self.wb.repositories = self.wb.setup_repositories()
 
         # Back to the repository menu
         self.manage_repositories_menu()
