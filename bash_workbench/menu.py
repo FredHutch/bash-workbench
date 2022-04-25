@@ -1166,8 +1166,17 @@ class WorkbenchMenu:
         # Get the name of the repository to download
         repo_name = self.questionary("text", "Repository name")
 
+        # Make sure that the user has checked the spelling and trusts
+        # the content of this repository
+        prompt = textwrap.dedent(f"""
+        Do you trust the code in this repository?
+        
+        Make sure that the spelling of the repository is correct: {repo_name}
+
+        Press <ENTER> or Y to confirm download.""")
+
         # If the user is not sure
-        if not self.questionary("confirm", f"Confirm - download repository {repo_name}"):
+        if not self.questionary("confirm", prompt):
 
             # Go back to the repository menu
             self.manage_repositories_menu()
@@ -1200,26 +1209,34 @@ class WorkbenchMenu:
             # Replace it with the complete home folder
             repo_fp = repo_fp.replace("~", self.wb.filelib.home())
 
-        # If the user is not sure
-        if not self.questionary(
+        # Make sure that the path is valid
+        is_valid = True
+
+        if len(repo_fp) == 0:
+            self.print_line("No entry made")
+            is_valid = False
+
+        elif not self.wb.filelib.exists(repo_fp):
+            self.print_line("Path is not valid")
+            is_valid = False
+
+        # If the path is valid, and the user is sure
+        if is_valid and self.questionary(
             "confirm",
-            f"Confirm - link local repository {repo_fp}"
+            f"Confirm - link local repository: {repo_fp}"
         ):
 
-            # Go back to the repository menu
-            self.manage_repositories_menu()
+            # Try to link it
+            try:
+                self.wb.link_local_repo(
+                    path=repo_fp,
+                    name=repo_fp.rstrip("/").rsplit("/", 1)[-1]
+                )
+            except Exception as e:
+                self.print_line(f"ERROR: {str(e)}")
 
-        # Try to link it
-        try:
-            self.wb.link_local_repo(
-                path=repo_fp,
-                name=repo_fp.rstrip("/").rsplit("/", 1)[-1]
-            )
-        except Exception as e:
-            self.print_line(f"ERROR: {str(e)}")
-
-        # Update the list of Repositories which are available
-        self.wb.repositories = self.wb.setup_repositories()
+            # Update the list of Repositories which are available
+            self.wb.repositories = self.wb.setup_repositories()
 
         # Back to the repository menu
         self.manage_repositories_menu()
