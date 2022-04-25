@@ -349,7 +349,8 @@ class ParamsMenu:
             folder="path",
             select="select",
             integer="text",
-            float="text"
+            float="text",
+            bool="select"
         )
 
         questionary_type = questionary_type_dict.get(wb_type)
@@ -366,10 +367,30 @@ class ParamsMenu:
             msg = "Must provide `wb_choices` for arguments where `wb_type` == 'select'"
             assert choices is not None, msg
             kwargs["choices"] = choices
+
+        # For boolean selectors
+        elif wb_type == "bool":
+
+            default = self.config[param_key].get("default")
+            assert default is not None, f"Must provide a default value (true/false) for {param_key}"
+            assert isinstance(default, bool), f"Must provide a default value (true/false) for {param_key}"
+
+            if default:
+                kwargs["default"] = "true"
+            else:
+                kwargs["default"] = "false"
+
+            # Present two choices
+            kwargs["choices"] = ["true", "false"]
+            # Transform the output back into a boolean
+            kwargs["output_f"] = lambda v: dict(true=True, false=False)[v]
+
         elif wb_type == "integer":
             kwargs["validate_type"] = lambda v: int(v)
+            kwargs["output_f"] = lambda v: int(v)
         elif wb_type == "float":
             kwargs["validate_type"] = lambda v: float(v)
+            kwargs["output_f"] = lambda v: float(v)
 
         msg = f"Error: no prompt type specified for variables of type {wb_type}"
         assert wb_type is not None, msg

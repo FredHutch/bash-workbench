@@ -48,7 +48,7 @@ class WorkbenchMenu:
         except ValueError:
             return False
 
-    def questionary(self, fname, msg, validate_type=None, **kwargs) -> str:
+    def questionary(self, fname, msg, validate_type=None, output_f=None, **kwargs) -> str:
         """Wrap questionary functions to catch escapes and exit gracefully."""
 
         # Get the questionary function
@@ -76,6 +76,12 @@ class WorkbenchMenu:
         # If the user escaped the question
         if resp is None:
             self.exit()
+
+        # If an output transformation function was defined
+        if output_f is not None:
+
+            # Call the function
+            resp = output_f(resp)
 
         # Otherwise
         return resp
