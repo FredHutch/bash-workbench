@@ -32,7 +32,7 @@ source ._wb/tool/env
 # messages to standard out or standard error to canonical
 # filepaths
 ( /bin/bash ._wb/tool/run.sh \
-2>> /dev/null \
-1>> /dev/null && \
+2>> >(tee -a ._wb/error.txt ._wb/log.txt >(cat 1>&2) > /dev/null) \
+1>> >(tee -a ._wb/output.txt ._wb/log.txt > /dev/null) && \
 set_status COMPLETED ) || \
 set_status FAILED
