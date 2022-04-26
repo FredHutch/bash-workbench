@@ -225,7 +225,7 @@ class WorkbenchMenu:
 
                 # Add option for viewing the logs
                 options.append(
-                    ("View Logs", self.view_logs_menu)
+                    ("View Logs", self.tail_logs)
                 )
 
             # Add option for editing the dataset
@@ -1117,7 +1117,7 @@ class WorkbenchMenu:
 
         # Set up the text used to prompt the user
         print_logs_prompt = "View more logs"
-        exit_logs_prompt = "Return to main menu (leaving process running)"
+        exit_logs_prompt = "Return to main menu"
 
         # Print logs to start
         user_choice = print_logs_prompt
@@ -1134,35 +1134,45 @@ class WorkbenchMenu:
                 # Refresh the status from the index
                 ds.read_index()
 
-                # If there is a 'status' defined as FAILED or COMPLETED
-                if ds.index.get('status') in ["FAILED", "COMPLETED"]:
+                # Get the list of custom actions which may
+                # optionally be available
+                actions = ds.get_actions()
 
-                    # Then we will exit the logs
-                    user_choice = exit_logs_prompt
-                    sleep(0.5)
+                # Ask the user what they want to do, while also showing
+                # the dataset status
+                user_choice = self.questionary(
+                    "select",
+                    f"Options (status: {ds.index.get('status', 'PENDING')})",
+                    choices=[
+                        print_logs_prompt,
+                        exit_logs_prompt
+                    ] + actions
+                )
 
-                # If the dataset is still running
-                else:
+                # Erase the prompt line
+                self.erase_lines(3)
+                # If the user selected an action
+                if user_choice in actions:
 
-                    # Get the list of custom actions which may
-                    # optionally be available
-                    actions = ds.get_actions()
+                    # Run the action
+                    ds.run_action(user_choice)
 
-                    # Ask the user what they want to do
-                    user_choice = self.questionary(
-                        "select",
-                        "Options",
-                        choices=[
-                            print_logs_prompt,
-                            exit_logs_prompt
-                        ] + actions
-                    )
+    def erase_lines(self, n_lines:int):
+        """Erase a number of lines from the display"""
 
-                    # If the user selected an action
-                    if user_choice in actions:
+        assert isinstance(n_lines, int)
+        assert n_lines > 0
 
-                        # Run the action
-                        ds.run_action(user_choice)
+        # Erase the current line
+        sys.stdout.write('\033[2K\033[1G')
+
+        # For each additional line
+        if n_lines > 1:
+            for _ in range(n_lines - 1):
+                # Go up a line
+                sys.stdout.write("\033[F")
+                # Erase that line
+                sys.stdout.write('\033[2K\033[1G')
 
     def jump_directory_menu(self, sep=" : "):
         """Select an indexed directory and navigate to it."""
@@ -1603,44 +1613,3 @@ class WorkbenchMenu:
 
         # Go back to the main menu
         self.main_menu()
-
-    def view_logs_menu(self):
-        """Provide options to view the logs present in a dataset."""
-
-        # Get the dataset information
-        ds = self.wb.dataset(self.cwd)
-
-        # Build a list of choices
-        choices = [
-            f"View {log_type}"
-            for log_type in ds.log_types()
-        ] + [
-            "Back"
-        ]
-
-        # Get the user's selection
-        selection = self.questionary(
-            "select",
-            "Select type of logs to display",
-            choices=choices
-        )
-
-        # If they are done
-        if selection == "Back":
-
-            # Go back to the main menu
-            self.main_menu()
-
-        # Otherwise
-        else:
-
-            # Get the log type
-            log_type = selection.split(" ", 1)[1]
-
-            # Print the log type
-            print(
-                ds.read_logs(log_type)
-            )
-
-            # Re-display the same menu
-            self.view_logs_menu()
