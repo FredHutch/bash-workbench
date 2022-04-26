@@ -492,19 +492,16 @@ class WorkbenchMenu:
 
         # Present the user with a list of assets and get their response
         # If they want to select none, they can use the "Back" option provided
-        selection = self._prompt_user_to_select_asset(asset_type)
+        repo_name, asset_name = self._prompt_user_to_select_asset(asset_type)
 
         # If the user decided to go back
-        if selection == "Back":
+        if repo_name == "Back" or asset_name == "Back":
 
             # Go back
             self.main_menu()
 
         # If the user selected a tool
         else:
-
-            # Parse the repository and asset from the selection
-            repo_name, asset_name = selection.split(": ")[0].split("/", 1)
 
             # Drop the user into the menu used to browse a single asset
             self._browse_single_asset(
