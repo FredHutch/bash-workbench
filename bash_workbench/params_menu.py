@@ -183,7 +183,7 @@ class ParamsMenu:
             "select",
             "Select a parameter to edit",
             choices=[
-                f"{param_key}: {self.format_value(param_key)}"
+                f"{param_key}: {self.format_value(param_key)}\n      {self.config[param_key].get('help', '')}"
                 for param_key in self.config
             ] + [
                 self.confirm_text,
