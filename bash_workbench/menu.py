@@ -447,6 +447,9 @@ class WorkbenchMenu:
             if len(repo.assets.get(asset_type, [])) > 0
         ]
 
+        # Sort the list alphabetically
+        repository_choices.sort()
+
         # Give the option to go back
         repository_choices.append("Back")
 
@@ -1243,6 +1246,9 @@ class WorkbenchMenu:
 
         # Get the list of repositories which have been downloaded
         local_repos = self.wb.list_repos()
+
+        # Sort the list
+        local_repos.sort()
 
         # Add an option for each of the downloaded repositories
         for repo in local_repos:
