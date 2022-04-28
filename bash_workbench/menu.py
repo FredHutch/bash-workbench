@@ -154,7 +154,6 @@ class WorkbenchMenu:
                         "Index the folder",
                         lambda: self.index_folder(self.cwd)
                     ),
-                    ("Browse all datasets", self.browse_home),
                     ("Exit", self.exit)
                 ]
             )
@@ -1476,20 +1475,6 @@ class WorkbenchMenu:
         for key, val in ix.items():
 
             self.print_line(f"{key}: {val}")
-
-    def browse_home(self):
-        """Navigate to the top-level home directory."""
-
-        # Directory containing all datasets
-        data_dir = self.wb._top_level_folder("data")
-
-        self.print_line(f"Changing working directory to {data_dir}")
-
-        # Change the working directory
-        self.cwd = data_dir
-
-        # Go back to the main menu
-        self.main_menu()
 
     def exit(self):
         """Exit the interactive display."""
