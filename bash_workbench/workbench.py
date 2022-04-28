@@ -966,7 +966,7 @@ class Workbench(FolderHierarchyBase):
         local_name = remote_name.replace("/", "_")
 
         # Make sure the local name has not been used before
-        assert local_name not in self.repositories
+        assert local_name not in self.repositories, f"Repository is already present: {remote_name}"
 
         # Instantiate the repository object
         repo = self.repository(local_name=local_name)
