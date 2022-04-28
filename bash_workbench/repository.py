@@ -20,15 +20,22 @@ class Repository(FolderHierarchyBase):
     def read_contents(self) -> None:
         """Read the configuration of all assets."""
 
-        # If any of the subfolders exist within ._wb/ with the
-        # names 'tool' or 'launcher', read those as Assets
-        self.assets = {
-            asset_type: self.read_assets(asset_type=asset_type)
-            for asset_type in ["tool", "launcher"]
-            # Do not attempt to read the assets if ._wb/
-            # does not exist
-            if self.complete
-        }
+        # Do not attempt to read the assets if ._wb/
+        # does not exist
+        if self.complete:
+
+            # If any of the subfolders exist within ._wb/ with the
+            # names 'tool' or 'launcher', read those as Assets
+            self.assets = {
+                asset_type: self.read_assets(asset_type=asset_type)
+                for asset_type in ["tool", "launcher"]
+            }
+
+        # If ._wb/ does not exist
+        else:
+
+            # Create an empty dict
+            self.assets = dict()
 
         # Try to set up a git object representing the contents of the repository,
         # if it is a valid git repository

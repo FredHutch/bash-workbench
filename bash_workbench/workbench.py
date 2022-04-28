@@ -72,13 +72,8 @@ class Workbench(FolderHierarchyBase):
             )
             for folder_name in self.listdir("repositories")
         }
-        # If the repository does not contain
-        # a folder ._wb/, then Repository.complete == False.
-        repositories = {
-            repo_name: repo
-            for repo_name, repo in repositories.items()
-            if repo.complete
-        }
+        # Include all repositories in this dict, even if they do not contain
+        # a folder ._wb/ (in which case Repository.complete == False)
 
         return repositories
 
