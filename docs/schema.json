@@ -1,0 +1,64 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://raw.githubusercontent.com/FredHutch/bash-workbench/main/docs/schema.json",
+    "title": "BASH Workbench Asset",
+    "description": "An asset (tool or launcher) used in the BASH Workbench",
+    "type": "object",
+    "properties": {
+        "name": {
+            "description": "Name of the tool or launcher",
+            "type": "string"
+        },
+        "description": {
+            "description": "Description of the tool or launcher",
+            "type": "string"
+        },
+        "args": {
+            "description": "Parameters used for the tool or launcher",
+            "type": "object",
+            "properties": {},
+            "additionalProperties": {
+                "description": "List of parameters required for the tool or launcher",
+                "type": "object",
+                "properties": {
+                    "help": {
+                        "description": "Help text for a single parameter",
+                        "type": "string"
+                    },
+                    "wb_type": {
+                        "description": "The variable type required by the parameter",
+                        "type": "string",
+                        "enum": [
+                            "string",
+                            "password",
+                            "file",
+                            "folder",
+                            "select",
+                            "integer",
+                            "float",
+                            "bool"
+                        ]
+                    },
+                    "wb_choices": {
+                        "description": "List of possible choices for 'select' type parameters",
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "wb_env": {
+                        "description": "If provided, the parameter value will be added to the execution environment with this key",
+                        "type": "string"
+                    },
+                    "default": {
+                        "description": "Default value (optional)"
+                    },
+                    "required": {
+                        "description": "Flag indicating whether the parameter is required for running the tool or launcher",
+                        "type": "boolean"
+                    }
+                },
+                "required": ["help", "wb_type"]
+            }
+        }
+    },
+    "required": ["name", "description", "args"]
+}
