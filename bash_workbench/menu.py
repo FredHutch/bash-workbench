@@ -1373,11 +1373,7 @@ class WorkbenchMenu:
 
         # Print the version of the local repository
         if self.wb.repositories[repo_name].repo is not None:
-            hexsha = self.wb.repositories[repo_name].repo.head.object.hexsha
-            self.print_line(f"Branch name: {self.wb.repositories[repo_name].repo.head.name}")
-            committed_date = strftime("%a, %d %b %Y %H:%M", gmtime(self.wb.repositories[repo_name].repo.head.object.committed_date))
-            self.print_line(f"Commit date: {committed_date}")
-            self.print_line(f"Commit hash: {hexsha}")
+            self.print_repo_version(repo_name)
 
         # Ask the user what to do
         self.select_func(
@@ -1389,6 +1385,14 @@ class WorkbenchMenu:
                 ("Back", self.manage_repositories_menu)
             ]
         )
+
+    def print_repo_version(self, repo_name:str) -> None:
+        """Print the version of a repo."""
+        hexsha = self.wb.repositories[repo_name].repo.head.object.hexsha
+        self.print_line(f"Branch name: {self.wb.repositories[repo_name].repo.head.name}")
+        committed_date = strftime("%a, %d %b %Y %H:%M", gmtime(self.wb.repositories[repo_name].repo.head.object.committed_date))
+        self.print_line(f"Commit date: {committed_date}")
+        self.print_line(f"Commit hash: {hexsha}")
 
     def update_local_repo(self, repo_name):
         """Update a local repository to the most recent version."""
@@ -1410,6 +1414,9 @@ class WorkbenchMenu:
 
         # Update the list of Repositories which are available
         self.wb.repositories = self.wb.setup_repositories()
+
+        # Print the updated repo version
+        self.print_repo_version(repo_name)
 
         # Go back to the repository menu
         self.manage_repositories_menu()
@@ -1461,6 +1468,9 @@ class WorkbenchMenu:
 
         # Update the list of Repositories which are available
         self.wb.repositories = self.wb.setup_repositories()
+
+        # Print the updated repo version
+        self.print_repo_version(repo_name)
 
         # Go back to the repository menu
         self.manage_repositories_menu()
