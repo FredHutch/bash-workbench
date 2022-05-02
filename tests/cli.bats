@@ -146,7 +146,7 @@
 @test "list_tools" {
 
   # List the basic set of tools available from the package
-  [ $(wb list_tools | jq 'length') == 1 ]
+  [ $(wb list_tools | jq 'length') >= 1 ]
 
 }
 
