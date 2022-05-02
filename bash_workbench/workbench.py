@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Union
 from .asset import Asset
 from .repository import Repository
 from .dataset import Dataset
@@ -96,7 +96,7 @@ class Workbench(FolderHierarchyBase):
             # Finally, link this dataset to the home folder if it is not already
             # nested below a collection which is similarly linked
             self.log(f"Adding to home tree: {path}")
-            self.add_to_home_tree(path)
+            self.add_to_home_tree(ds, path)
 
             # Add it to the collection of datasets
             self.datasets.add(ds)
@@ -106,104 +106,76 @@ class Workbench(FolderHierarchyBase):
 
         return ds.index
 
-    def add_to_home_tree(self, path:str):
+    def add_to_home_tree(self, ds:Dataset, path:str):
         """If a folder is not already contained in the home tree, add it."""
 
         # Resolve symlinks and remove any terminal slashes
         path = self.filelib.abs_path(path)
 
-        # If the path _is_ the home dataset directory
-        if path == self.path("data"):
+        # Get the UUID for the dataset
+        ds_uuid = ds.index["uuid"]
 
-            # Do not take any further action
-            # (prevent the creation of a circular link)
+        # Write the path to the file named for the UUID
+        self.filelib.write_text(
+            path,
+            self.path("data", ds_uuid)
+        )
+
+    def parse_reference(self, ds_uuid:str) -> Union[None, Dataset]:
+        """Check to see if there is a valid reference to this dataset in the data/ folder."""
+
+        # If there is no file with the name `ds_uuid` in ._wb/data/
+        if not self.exists("data", ds_uuid):
             return
 
-        self.log(f"Making sure that folder is present in home tree: {path}")
+        # If the file is a symlink
+        if self.filelib.islink(self.path("data", ds_uuid)):
+            # Then it is not valid
+            return
 
-        # Keep track of whether we've seen this path
-        path_seen = False
+        # The file should contain the path to a folder which contains a dataset
+        with open(self.path("data", ds_uuid)) as handle:
+            ds_path = handle.readline()
 
-        # Iterate over each of the datasets/collections in the home tree
-        for ds in self.walk_home_tree():
+        # If the file does not exist
+        if len(ds_path) == 0 or self.filelib.exists(ds_path) is False:
+            return
 
-            # If we come across this folder
-            if ds.base_path == path:
+        # If the file does exist
 
-                # Mark this path as seen
-                path_seen = True
+        # Parse the Dataset
+        ds = self.dataset(ds_path)
 
-                # Break the loop
-                break
+        # If it is not a valid dataset
+        if not ds.complete or ds.index is None:
+            return
 
-        # If the path was found
-        if path_seen:
-
-            self.log(f"Path already contained in home tree ({path})")
-
-        # If it was not found
+        # If it is a valid dataset, make sure that the UUID is a match
+        if ds_uuid == ds.index["uuid"]:
+            return ds
         else:
-
-            # Link the folder to the home directory
-            self.link_to_home(path)
-
-            self.log(f"Link for path added to home tree ({path})")
-
+            return
+            
     def walk_home_tree(self):
-        """Walk through all of the indexed folders which are linked anywhere within the home folder."""
+        """Walk through all of the indexed folders which are linked to the home folder."""
 
-        # Keep track of all of the folders which we've found before
-        seen_folders = set()
+        # Iterate over each of the files in data/, which are named for a dataset UUID
+        for ds_uuid in self.listdir("data"):
 
-        # Keep a list of folders that we need to walk through
-        folders_to_check = list()
+            # Make a series of checks to see if this file is a valid dataset reference
+            # If it is valid, return a Dataset object
+            ds = self.parse_reference(ds_uuid)
 
-        # To start, add the home folder to the list of folders to check
-        folders_to_check.append(self.path("data"))
+            # If it is not a valid link
+            if ds is None:
 
-        # Iterate while there are folders remaining to check
-        while len(folders_to_check) > 0:
+                # Remove the link
+                self.filelib.rm(self.path("data", ds_uuid))
 
-            # Get a folder to check, removing it from the list
-            folder_to_check = folders_to_check.pop()
+            # If it is valid
+            else:
 
-            # Iterate over each path within it
-            for subpath in self.filelib.listdir(folder_to_check):
-
-                # Construct the full path
-                subpath = self.filelib.abs_path(
-                    self.filelib.path_join(folder_to_check, subpath)
-                )
-
-                # If the path is not a directory
-                if not self.filelib.isdir(subpath):
-
-                    # Skip it
-                    continue
-
-                # If there is no index
-                index_folder = self.filelib.path_join(subpath, "._wb")
-                index_json = self.filelib.path_join(subpath, "._wb", "index.json")
-                if self.filelib.exists(index_folder) is False or self.filelib.exists(index_json) is False:
-                    # Skip it
-                    continue
-
-                # If the folder has an index
-                else:
-
-                    # If we've already seen it, there is some circular link which
-                    # must be resolved by the user
-                    msg = f"Encountered circular link: user must resolve (re: {subpath})"
-                    assert subpath not in seen_folders, msg
-
-                    # Add the subpath to the set of seen folders
-                    seen_folders.add(subpath)
-
-                    # Emit this Dataset
-                    yield self.dataset(subpath)
-
-                    # Add the subpath to the list of paths to check next
-                    folders_to_check.append(subpath)
+                yield ds
 
     def dataset(self, path:str) -> Dataset:
         """Generate a Dataset object for a particular path."""
