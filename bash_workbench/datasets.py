@@ -1,11 +1,10 @@
 from .dataset import Dataset
-from .workbench import Workbench
 
 
 class Datasets:
     """Collection of datasets with useful helper functions."""
 
-    def __init__(self, wb:Workbench):
+    def __init__(self, wb):
 
         # Attach the workbench
         self.wb = wb
