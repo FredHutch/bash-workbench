@@ -899,8 +899,11 @@ class WorkbenchMenu:
             # Tail the logs
             self.tail_logs()
 
-        # Return to the main menu
-        self.main_menu()
+        # Otherwise
+        else:
+
+            # Return to the main menu
+            self.main_menu()
 
     def setup_tool_menu(self):
         """Set up a tool for a dataset."""
@@ -1155,6 +1158,9 @@ class WorkbenchMenu:
 
                     # Run the action
                     ds.run_action(user_choice)
+
+        # When all done, return to the main menu
+        self.main_menu()
 
     def erase_lines(self, n_lines:int):
         """Erase a number of lines from the display"""
