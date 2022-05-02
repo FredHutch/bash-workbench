@@ -103,7 +103,7 @@ class Datasets:
 
             self._filter_one(ds.index["uuid"], field=field, value=value)
 
-    def add_filter(self, field=None, value=None):
+    def add_filter(self, field:str=None, value:str=None):
         """Add a filter to all datasets."""
 
         # Add the field, value tuple to the list of filters
@@ -112,7 +112,7 @@ class Datasets:
         # Apply the filter to all datasets
         self._filter_all(field=field, value=value)
 
-    def remove_filter(self, field=None, value=None):
+    def remove_filter(self, field:str=None, value:str=None):
         """Remove a particular filter from the datasets."""
 
         # Remove the filter from the list of filters
@@ -135,7 +135,7 @@ class Datasets:
 
             self._filter_all(field=field, value=value)
 
-    def _filter_one(self, ds_uuid, field=None, value=None):
+    def _filter_one(self, ds_uuid, field:str=None, value:str=None):
         """Apply a filter to a single dataset."""
 
         # The ds_uuid must identify an entry in self.datasets
@@ -169,7 +169,7 @@ class Datasets:
             # Check if the query is in the indicated field
             self.passes_filter[ds_uuid] = value in ds_info[field]
 
-    def _reset_filter_one(self, ds_uuid):
+    def _reset_filter_one(self, ds_uuid:str):
         """Reset the filter for a single dataset."""
 
         # The ds_uuid must identify an entry in self.datasets
@@ -178,7 +178,7 @@ class Datasets:
         # Set the entry in passes_filter to True
         self.passes_filter[ds_uuid] = True
 
-    def _filter_all(self, field=None, value=None):
+    def _filter_all(self, field:str=None, value:str=None):
         """Apply a filter to all datasets."""
 
         # Iterate over every dataset
@@ -187,7 +187,7 @@ class Datasets:
             # Check the query
             self._filter_one(ds_uuid, field=field, value=value)
 
-    def _reset_filter_all(self, field=None, value=None):
+    def _reset_filter_all(self, field:str=None, value:str=None):
         """Reset the filter for all datasets."""
 
         # Iterate over every dataset
@@ -196,7 +196,7 @@ class Datasets:
             # Reset the filter
             self._reset_filter_one(ds_uuid)
 
-    def _get_filtered_uuids(self, incl_anc=True):
+    def _get_filtered_uuids(self, incl_anc:bool=True):
         """
         Return the set of dataset UUIDs which pass the current filtering.
         By default, all datasets which contain those passing datasets will also
@@ -236,7 +236,7 @@ class Datasets:
 
         return to_keep
 
-    def filtered(self, incl_anc=True):
+    def filtered(self, incl_anc:bool=True):
         """
         Return the collection (dict) of datasets which pass the filter.
         By default, all datasets which contain those passing datasets will also
@@ -264,7 +264,7 @@ class Datasets:
 
         return datasets
 
-    def filtered_len(self, incl_anc=True):
+    def filtered_len(self, incl_anc:bool=True):
         """
         Return the number of datasets which pass the filter.
         By default, all datasets which contain those passing datasets will also
@@ -273,7 +273,7 @@ class Datasets:
 
         return len(self._get_filtered_uuids(incl_anc=incl_anc))
 
-    def filtered_paths(self, sep=" : "):
+    def filtered_paths(self, sep:str=" : "):
         """
         Return a list of filtered datasets in the format:
         <NAME_HIERARCHY> : <PATH_HIERARCHY>
@@ -315,7 +315,7 @@ class Datasets:
         # Return the sorted list
         return name_path_list
 
-    def path_to_root(self, d, k, reverse=True):
+    def path_to_root(self, d, k, reverse:bool=True):
         """
         For any dict, return the list of keys from the dict d
         which start from k and extend iteratively to each
@@ -411,8 +411,8 @@ class Datasets:
 
     def yield_dataset_tree_single(
         self,
-        ds_uuid,
-        indentation="",
+        ds_uuid:str,
+        indentation:str="",
         list_position=None,
         has_children=None
     ):
