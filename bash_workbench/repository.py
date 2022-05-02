@@ -130,6 +130,9 @@ class Repository(FolderHierarchyBase):
         # Read the contents of the cloned repository
         self.read_contents()
 
+        # Make sure that the repository is valid
+        assert self.repo is not None, f"Error cloning repository '{repo_name}'"
+
     def pull(self):
         """Pull the most recent version of a repository."""
 
