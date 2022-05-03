@@ -158,6 +158,9 @@ class WorkbenchMenu:
                 ]
             )
 
+            # Get the new index
+            ds = self.wb.dataset(self.cwd)
+
         # If the dataset is not in the collection
         if not self.wb.datasets.path_exists(self.cwd):
 
