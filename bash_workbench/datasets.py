@@ -31,6 +31,16 @@ class Datasets:
             # Add the dataset to the collection
             self.add(ds)
 
+    def path_exists(self, path:str) -> bool:
+        """Return a boolean indicating whether the path exists in the collection."""
+
+        return self.path_dict.get(path) is not None
+
+    def uuid_exists(self, uuid:str) -> bool:
+        """Return a boolean indicating whether the uuid exists in the collection."""
+
+        return self.datasets.get(uuid) is not None
+
     def from_path(self, path:str) -> Dataset:
         """Return a Dataset for a particular path."""
 
@@ -293,12 +303,9 @@ class Datasets:
             for k in ds_dict
         }
 
-        # Make a dict of the path hierarchy for each dataset
+        # Make a dict of the absolute paths to each dataset
         paths = {
-            k: "/".join([
-                ds_dict[i]["path"].rsplit("/", 1)[-1]
-                for i in self.path_to_root(ds_dict, k)
-            ])
+            k: ds_dict[k]["path"]
             for k in ds_dict
         }
 

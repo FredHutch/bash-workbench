@@ -158,6 +158,15 @@ class WorkbenchMenu:
                 ]
             )
 
+        # If the dataset is not in the collection
+        if not self.wb.datasets.path_exists(self.cwd):
+
+            # Add it to the collection
+            self.wb.add_to_home_tree(ds, self.cwd)
+
+            # Add it to the dataset collection
+            self.wb.datasets.add(ds)
+
     def main_menu(self):
         """Show the main menu"""
 
@@ -266,15 +275,24 @@ class WorkbenchMenu:
     def explore_datasets_menu(self):
         """Inspect and navigate the available indexed datasets."""
 
+        choices = [
+            ("List All Datasets", self.list_all_datasets),
+            ("Add/Remove Dataset Filters", self.add_remove_filters),
+            ("Import Existing Dataset", self.import_folder)
+        ]
+
+        if len(self.wb.datasets.filtered_paths(sep=" : ")) > 0:
+            choices.append(
+                ("Change Directory", self.jump_directory_menu)
+            )
+
+        choices.append(
+            ("Back to Main Menu", self.main_menu)
+        )
+
         self.select_func(
             """Would you like to:""",
-            [
-                ("List All Datasets", self.list_all_datasets),
-                ("Add/Remove Dataset Filters", self.add_remove_filters),
-                ("Import Existing Dataset", self.import_folder),
-                ("Change Directory", self.jump_directory_menu),
-                ("Back to Main Menu", self.main_menu)
-            ]
+            choices
         )
 
     def print_line(self, text, indent=0, leader="- "):
@@ -1209,6 +1227,12 @@ class WorkbenchMenu:
             only_directories=True
         )
 
+        # If the user selected the home directory with a tilde
+        if folder_to_import.startswith("~"):
+
+            # Replace the tilde with the home directory
+            folder_to_import = f"{self.wb.filelib.home()}{folder_to_import[1:]}"
+
         # Try to add the folder
         try:
             self.wb.index_folder(folder_to_import)
@@ -1223,8 +1247,8 @@ class WorkbenchMenu:
         # Report success
         self.print_line(f"Imported folder {folder_to_import}")
 
-        # Back to the main menu
-        self.main_menu()
+        # Back to the Explore Datasets menu
+        self.explore_datasets_menu()
     
     def manage_repositories_menu(self):
         """Manage the repositories available"""

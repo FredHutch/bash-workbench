@@ -93,16 +93,16 @@ class Workbench(FolderHierarchyBase):
             self.log(f"Indexing folder: {path}")
             ds.create_index()
 
-            # Finally, link this dataset to the home folder if it is not already
-            # nested below a collection which is similarly linked
-            self.log(f"Adding to home tree: {path}")
-            self.add_to_home_tree(ds, path)
-
-            # Add it to the collection of datasets
-            self.datasets.add(ds)
-
         else:
             self.log("Index already exists")
+
+        # Finally, link this dataset to the home folder if it is not already
+        # nested below a collection which is similarly linked
+        self.log(f"Adding to home tree: {path}")
+        self.add_to_home_tree(ds, path)
+
+        # Add it to the collection of datasets
+        self.datasets.add(ds)
 
         return ds.index
 
