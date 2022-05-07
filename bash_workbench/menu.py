@@ -470,6 +470,12 @@ class WorkbenchMenu:
         # Sort the list alphabetically
         repository_choices.sort()
 
+        # If this is not a tool
+        if asset_type != "tool":
+            
+            # Give the option to skip the asset entirely
+            repository_choices.append(f"Run without a {asset_type}")
+
         # Give the option to go back
         repository_choices.append("Back")
 
@@ -487,6 +493,11 @@ class WorkbenchMenu:
         if selected_repo == "Back":
 
             return (selected_repo, None)
+
+        # If the user decided to go without this asset
+        elif selected_repo.startswith("Run without a "):
+
+            return ("Skip", None)
 
         # Format a list of strings using the asset key, name, and description
         asset_choices = [
@@ -958,21 +969,34 @@ class WorkbenchMenu:
             # Get the asset name
             asset_name = asset_config.get('name')
 
-            # Ask the user if they want to replace this asset
-            # or keep it
+            # Make a list of options to display to the user
+            # 1. Use the asset that has already been set up
+            # 2. Pick a new one
+            # 3. Go back to the main menu
+            # 4. Go without one entirely (if it is not a tool, which cannot be skipped)
+            options = [
+                (
+                    f"Run previously selected {asset_type}",
+                    lambda: self.print_line(f"Running {asset_type} {asset_name}")
+                ),
+                (
+                    f"Choose new {asset_type}",
+                    lambda: self._choose_asset(asset_type)
+                ),
+                ("Return to main menu", self.main_menu)
+            ]
+            if asset_type != "tool":
+                options.append(
+                    (
+                        f"Run without a {asset_type}",
+                        lambda: ds.remove_asset(asset_type)
+                    )
+                )
+
+            # Ask the user to select from those options
             self.select_func(
                 f"Previously selected {asset_type}:\n  - {asset_name}\n   ",
-                [
-                    (
-                        f"Run previously selected {asset_type}",
-                        lambda: self.print_line(f"Running {asset_type} {asset_name}")
-                    ),
-                    (
-                        f"Choose new {asset_type}",
-                        lambda: self._choose_asset(asset_type)
-                    ),
-                    ("Return to main menu", self.main_menu)
-                ]
+                options
             )
 
         # If no asset has been set up yet
@@ -1000,7 +1024,13 @@ class WorkbenchMenu:
             # Go back
             self.main_menu()
 
-        # Otherwise
+        # If the user decided to skip this asset type entirely
+        elif repo_name == "Skip":
+
+            # Don't take any action
+            pass
+
+        # Otherwise, if the user did select an asset to set up
         else:
 
             # If the asset has already been set up
@@ -1046,14 +1076,25 @@ class WorkbenchMenu:
         asset_name = ds.index.get(asset_type)
 
         # If an asset has not been set up
-        while asset_name is None:
+        if asset_name is None:
 
-            # Choose one
-            self.print_line(f"No {asset_name} has been set up yet")
-            self._choose_asset(asset_type)
+            # If the asset is a tool (which is required)
+            if asset_type == "tool":
 
-            # Get the name of the tool/launcher which has now been set up
-            asset_name = ds.index.get(asset_type)
+                while asset_name is None:
+
+                    # Choose one
+                    self.print_line(f"No {asset_name} has been set up yet")
+                    self._choose_asset(asset_type)
+
+                    # Get the name of the tool/launcher which has now been set up
+                    asset_name = ds.index.get(asset_type)
+
+            # Otherwise, for a launcher
+            else:
+
+                # Take no further action
+                return
         
         # Set up this asset
         asset = self.wb.asset(asset_type=asset_type, asset_name=asset_name)

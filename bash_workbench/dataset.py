@@ -416,3 +416,14 @@ class Dataset(FolderHierarchyBase):
             cwd=self.base_path
         )
 
+    def remove_asset(self, asset_type) -> None:
+        """Clear an asset type from the dataset index."""
+
+        # If the asset is defined
+        if self.index.get(asset_type) is not None:
+
+            # Remove it from the index
+            del self.index[asset_type]
+
+            # And save the index
+            self.write_index(overwrite=True)

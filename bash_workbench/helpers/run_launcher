@@ -38,8 +38,8 @@ file_exists ._wb/launcher/env
 # parameters for the launcher
 source ._wb/launcher/env
 
-# Set the status as RUNNING
-set_status RUNNING
+# Set the status as LAUNCHING
+set_status LAUNCHING
 
 # Run the launcher with the `run.sh` script defined by
 # the developer. While running this command, route any
