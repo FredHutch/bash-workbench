@@ -46,5 +46,5 @@ set_status RUNNING
 # messages to standard out or standard error to canonical
 # filepaths
 /bin/bash ._wb/launcher/run.sh \
-2>> >(tee -a ._wb/error.txt ._wb/log.txt >(cat 1>&2)) \
-1>> >(tee -a ._wb/output.txt ._wb/log.txt)
+2>> >(tee -a ._wb/error.txt >> ._wb/log.txt) \
+1>> >(tee -a ._wb/output.txt >> ._wb/log.txt)
