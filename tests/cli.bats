@@ -303,6 +303,30 @@
 
 }
 
+@test "run without launcher" {
+  # Test the running of a dataset without a launcher entirely
+
+  # Make a new folder
+  mkdir ext_data/data_folder_6
+  cd ext_data/data_folder_6
+
+  # Make some files in it
+  echo foo > bar
+  echo bar > foo
+
+  # Set it up with the tool 'make_tar_gz'
+  # Use the short name for the tool and launcher, since they are unique
+  wb setup_dataset \
+    --tool make_tar_gz
+
+  # Set the params to use with the tool and run it in a single command
+  wb run_dataset \
+    --archive TEST_ARCHIVE \
+    --target ./ \
+    --wait
+
+}
+
 @test "list_repositories" {
 
   REPO_LIST="$(wb list_repos)"

@@ -512,7 +512,7 @@ class Workbench(FolderHierarchyBase):
             # Return the asset
             return repo.assets[asset_type][name]
             
-    def setup_dataset(self, path:str=None, tool:str=None, launcher:str=None, overwrite:bool=False):
+    def setup_dataset(self, path:str=None, tool:Asset=None, launcher:Asset=None, overwrite:bool=False):
         """Set up a dataset with a tool and a launcher."""
 
         self.log(f"Setting up a dataset for analysis at {path}")
@@ -531,15 +531,22 @@ class Workbench(FolderHierarchyBase):
         tool = self.asset(asset_type="tool", asset_name=tool)
         tool.copy_to_dataset(ds, overwrite=overwrite)
 
-        self.log(f"Using launcher {launcher} for analysis")
-        launcher = self.asset(asset_type="launcher", asset_name=launcher)
-        launcher.copy_to_dataset(ds, overwrite=overwrite)
+        # If the launcher has been specified (which is optional)
+        if launcher is not None:
+
+            self.log(f"Using launcher {launcher} for analysis")
+            launcher = self.asset(asset_type="launcher", asset_name=launcher)
+            launcher.copy_to_dataset(ds, overwrite=overwrite)
+
+        else:
+            self.log("No launcher has been specified for analysis")
 
         # Record the time at which the scripts were set up
         self.log("Recording tool and launcher in dataset index")
         ds.set_attribute("setup_at", self.timestamp.encode())
         ds.set_attribute("tool", tool.name)
-        ds.set_attribute("launcher", launcher.name)
+        if launcher is not None:
+            ds.set_attribute("launcher", launcher.name)
 
     def set_tool_params(self, path:str=None, overwrite:bool=False, **kwargs):
         """Set the parameters used to run the tool in a particular dataset."""
@@ -551,7 +558,7 @@ class Workbench(FolderHierarchyBase):
 
         self._set_asset_params(path, "launcher", overwrite=overwrite, **kwargs)
 
-    def _set_asset_params(self, path:str, asset_type:str, overwrite:bool=False, **kwargs):
+    def _set_asset_params(self, path:str, asset_type:str, overwrite:bool=False, required:bool=True, **kwargs):
         """Set the parameters used to run a tool or launcher in a particular dataset."""
 
         # Instantiate the dataset object
@@ -561,9 +568,18 @@ class Workbench(FolderHierarchyBase):
         msg = f"Folder is not an indexed folder: {path}"
         assert ds.index is not None, msg
 
-        # A tool/launcher must have been set up for this dataset
-        msg = f"No {asset_type} has been set up for {path}"
-        assert ds.index.get(asset_type) is not None, msg
+        # A tool/launcher must have been set up for this dataset,
+        # if and only if required == True
+        if required:
+            msg = f"No required {asset_type} has been set up for {path}"
+            assert ds.index.get(asset_type) is not None, msg
+
+        # If the asset has not been set up, and it is not required
+        if ds.index.get(asset_type) is None and required is False:
+
+            # Do not take any more action
+            self.log(f"Optional {asset_type} has not been set up, stopping")
+            return
 
         # Get the name of the asset
         asset_name = ds.index.get(asset_type)
@@ -893,8 +909,15 @@ class Workbench(FolderHierarchyBase):
         if len(kwargs) > 0:
 
             # Use those arguments to set the tool and launcher
+            # The launcher is optional, while the tool is required
             for asset_type in ["tool", "launcher"]:
-                self._set_asset_params(path, asset_type, overwrite=True, **kwargs)
+                self._set_asset_params(
+                    path,
+                    asset_type,
+                    overwrite=True,
+                    required=asset_type == "tool",
+                    **kwargs
+                )
 
         # Copy all of the helpers to the dataset
         self._copy_helpers_to_dataset(path)

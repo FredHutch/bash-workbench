@@ -295,9 +295,21 @@ class Dataset(FolderHierarchyBase):
     def run(self, wait:bool=False, interval:float=1.0) -> None:
         """Launch the tool which has been configured for this dataset."""
 
+        # If a launcher has been set up
+        if self.index.get("launcher") is not None:
+
+            # Then the dataset will start by running the launcher
+            entrypoint = "launcher"
+
+        # Otherwise, if a launcher has not been set up
+        else:
+
+            # Then the dataset will start by running the tool directly
+            entrypoint = "tool"
+
         # Start the process
         proc = subprocess.Popen(
-            ["/bin/bash", self.wb_path("helpers/run_launcher")],
+            ["/bin/bash", self.wb_path(f"helpers/run_{entrypoint}")],
             start_new_session=True,
             cwd=self.base_path
         )
