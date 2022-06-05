@@ -21,6 +21,11 @@ set_status(){
     /bin/bash ._wb/helpers/set_dataset_attribute status $1
 }
 
+# Print the parameters being used for the tool
+echo "Tool Parameters:"
+cat ._wb/tool/params.json
+echo
+
 # Set all of the environment variables defined by the
 # parameters for the launcher
 file_exists ._wb/tool/run.sh

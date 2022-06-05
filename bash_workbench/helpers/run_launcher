@@ -34,6 +34,11 @@ file_exists ._wb/launcher/params.json
 file_exists ._wb/launcher/config.json
 file_exists ._wb/launcher/env
 
+# Print the parameters being used for the tool
+echo "Launcher Parameters:"
+cat ._wb/launcher/params.json
+echo
+
 # Set all of the environment variables defined by the
 # parameters for the launcher
 source ._wb/launcher/env
