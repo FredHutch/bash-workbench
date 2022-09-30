@@ -229,6 +229,9 @@ class Workbench(FolderHierarchyBase):
     def list_datasets(self):
         """Return a list of all datasets linked from the home folder."""
 
+        # Make sure that the datasets have been populated from the home directory
+        self.datasets.populate()
+
         # Return the simple dict of all datasets
         return self.datasets.datasets
 
@@ -239,6 +242,9 @@ class Workbench(FolderHierarchyBase):
         tag:str=None
     ):
         """Find any datasets which match the provided queries."""
+
+        # Make sure that the datasets have been populated from the home directory
+        self.datasets.populate()
 
         # Filter the datasets based on the name, description, and/or tag filters provided
         self.filter_datasets(
@@ -259,6 +265,9 @@ class Workbench(FolderHierarchyBase):
 
     def filter_datasets(self, name:str=None, description:str=None, tag:str=None):
         """Apply one or more filters to the datasets in the workbench."""
+
+        # Make sure that the datasets have been populated from the home directory
+        self.datasets.populate()
 
         # If a query name was provided
         if name is not None:
@@ -310,6 +319,9 @@ class Workbench(FolderHierarchyBase):
         If any of name, description, or tag is provided, filter to just those
         datasets which match the provided pattern, as well as their parents
         """
+
+        # Make sure that the datasets have been populated from the home directory
+        self.datasets.populate()
 
         # Filter the datasets based on the name, description, and/or tag filters provided
         self.filter_datasets(
