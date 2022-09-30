@@ -229,6 +229,8 @@ class Workbench(FolderHierarchyBase):
     def list_datasets(self):
         """Return a list of all datasets linked from the home folder."""
 
+        print('here0')
+
         # Make sure that the datasets have been populated from the home directory
         self.datasets.populate()
 
