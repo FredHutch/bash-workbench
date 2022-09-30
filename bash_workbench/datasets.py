@@ -25,11 +25,22 @@ class Datasets:
         # Keep a list of all filters which have been applied
         self.filters = list()
 
-        # Iterate over all of the datasets and collections linked to the home folder
-        for ds in self.wb.walk_home_tree():
+        # When the object is instantiated, do not automatically walk the home tree
+        self._populated = False
 
-            # Add the dataset to the collection
-            self.add(ds)
+    def populate(self):
+        """Populate the list of datasets by walking the home tree."""
+
+        # If we haven't already populated the datasets
+        if not self._populated:
+
+            # Iterate over all of the datasets and collections linked to the home folder
+            for ds in self.wb.walk_home_tree():
+
+                # Add the dataset to the collection
+                self.add(ds)
+
+        self._populated = True
 
     def path_exists(self, path:str) -> bool:
         """Return a boolean indicating whether the path exists in the collection."""
