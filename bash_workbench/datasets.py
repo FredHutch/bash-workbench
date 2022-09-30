@@ -31,12 +31,8 @@ class Datasets:
     def populate(self):
         """Populate the list of datasets by walking the home tree."""
 
-        print('here1')
-
         # If we haven't already populated the datasets
         if not self._populated:
-
-            print('here2')
 
             # Iterate over all of the datasets and collections linked to the home folder
             for ds in self.wb.walk_home_tree():

@@ -264,8 +264,6 @@ class WorkbenchMenu:
     def list_all_datasets(self):
         """List the complete set of datasets which have been indexed by the workbench."""
 
-        self.print_header("HERE")
-
         # Make sure that all datasets have been populated from the home directory
         self.wb.datasets.populate()
 
